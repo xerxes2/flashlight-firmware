@@ -33,7 +33,8 @@
 // Beacon settings
 #define BEACON_ON 2000  // Beacon on time (ms)
 #define BEACON_OFF 4000 // Beacon off time (ms)
-#define BEACON_OUT 255 // Beacon output level (0-255)
+#define BEACON_ON_OUT 255 // Beacon output level (0-255)
+#define BEACON_OFF_OUT 0 // Beacon output level (0-255)
 // SOS settings
 #define SOS_PAUSE 5000 // Pause between SOS groups (ms)
 #define SOS_DOT 200 // Morse code dot duration (ms)
@@ -163,9 +164,9 @@ void mode_strobe(void) {
 
 void mode_beacon(void) {
   while(1){
-    set_output(BEACON_OUT);
+    set_output(BEACON_ON_OUT);
     _delay_ms(BEACON_ON);
-    set_output(0);
+    set_output(BEACON_OFF_OUT);
     _delay_ms(BEACON_OFF);
   }
 }
