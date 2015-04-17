@@ -39,7 +39,8 @@
 #define SOS_PAUSE 5000 // Pause between SOS groups (ms)
 #define SOS_DOT 200 // Morse code dot duration (ms)
 // Battery monitoring
-#define VOLTAGE_MON 1 // Enable battery monitoring, 0 off and 1 on
+#define BATT_MON 1 // Enable battery monitoring, 0 off and 1 on
+#define BATT_TIMEOUT 10 // Number of WTD ticks between checks, each tick is 500ms
 #define ADC_LOW 130 // When do we start ramping
 #define ADC_CRIT 120 // When do we shut the light off
 #define ADC_LOW_OUT 20 // Output level in low battery mode (0-255)
@@ -234,8 +235,8 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
     }
   }
 
-  if (VOLTAGE_MON && ticks == 255) {
-    ticks = 240; // Voltage monitoring interval
+  if (BATT_MON && ticks == 255) {
+    ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
     if (lowbatt_mode == 0) {
       if (low_voltage(ADC_LOW)) {
         if (!smode && mypwm > ADC_LOW_OUT) {
@@ -256,7 +257,7 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
 
 int main(void) {
   DDRB = (1 << PWM_PIN); // Set PWM pin to output
-  if (VOLTAGE_MON) {
+  if (BATT_MON) {
     ADC_on(); // Enable battery monitoring
   } else {
     ADC_off(); // Disable battery monitoring
