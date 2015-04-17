@@ -211,7 +211,7 @@ uint8_t low_voltage(uint8_t voltage_val) {
   ADCSRA |= (1 << ADSC); // Start conversion
   while (ADCSRA & (1 << ADSC)); // Wait for completion
   if (ADCH < voltage_val) { // See if voltage is lower than what we were looking for
-    if (++lowbatt_cnt > 30) { // See if it's been low for a while
+    if (++lowbatt_cnt > 10) { // See if it's been low for a while
       lowbatt_cnt = 0;
       return 1;
     }
@@ -233,13 +233,14 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
     }
   }
 
-  if (VOLTAGE_MON) {
+  if (VOLTAGE_MON && ticks == 255) {
+    ticks = 240; // Voltage monitoring interval
     if (lowbatt_mode == 0) {
       if (low_voltage(ADC_LOW)) {
-          lowbatt_mode = 1;
-          if (!smode && mypwm > ADC_LOW_OUT) {
-            set_output(ADC_LOW_OUT); // Lower output if not in special mode
-          }
+        if (!smode && mypwm > ADC_LOW_OUT) {
+          set_output(ADC_LOW_OUT); // Lower output if not in special mode
+        }
+        lowbatt_mode = 1;
       }
     } else {
       if (low_voltage(ADC_CRIT)) {
