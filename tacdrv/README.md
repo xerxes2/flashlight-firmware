@@ -1,4 +1,4 @@
-TacDrv - simple firmware for flashlight drivers
+TacDrv - tactical firmware for flashlight drivers
 -----------------------------------------------
 
 License: Released to the Public Domain.
