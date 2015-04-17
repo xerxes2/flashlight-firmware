@@ -42,10 +42,10 @@
 #define ADC_LOW 130 // When do we start ramping
 #define ADC_CRIT 120 // When do we shut the light off
 #define ADC_LOW_OUT 20 // Output level in low battery mode (0-255)
-// Various settings
-#define MEMORY 0 // Mode memory, 0 off and 1 on
-#define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
+// Misc settings
+#define MODE_MEMORY 0 // Mode memory, 0 off and 1 on
 #define MODE_TIMEOUT 2 // Number of WTD ticks before mode is saved, each tick is 500ms
+#define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 
 //################################
 //  End user tweaking
@@ -227,7 +227,7 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   static uint8_t ticks = 0;
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) {
-    if (!MEMORY) {
+    if (!MODE_MEMORY) {
       store_mode_idx(0);
     } else {
       store_mode_idx(mode_idx);
