@@ -237,10 +237,14 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
     ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
     if (lowbatt_mode == 0) {
       if (low_voltage(ADC_LOW)) {
-        if (!smode && mypwm > ADC_LOW_OUT) {
-          set_output(ADC_LOW_OUT); // Lower output if not in special mode
-        }
         lowbatt_mode = 1;
+        if (!smode) {
+          if (mypwm > ADC_LOW_OUT) {
+            mypwm = ADC_LOW_OUT; // Lower output if not in special mode
+          }
+          morse_blink(1, 5, mypwm); // Flash a few times
+          set_output(mypwm);
+        }
       }
     } else {
       if (low_voltage(ADC_CRIT)) {
