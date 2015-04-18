@@ -76,9 +76,8 @@ uint8_t eep[32];
 uint8_t mode_idx = 0;
 PROGMEM const uint8_t modes[]=MODES;
 const uint8_t mode_cnt = sizeof(modes);
-uint8_t mypwm=0; // Output level
-uint8_t pmode=50; // Mode identifier
-uint8_t smode=1; // Special mode boolean
+uint8_t mypwm = 50; // Output level
+uint8_t smode = 1; // Special mode boolean
 // ### Globals end ###
 
 void store_mode_idx(uint8_t lvl) {  // central method for writing (with wear leveling)
@@ -264,24 +263,21 @@ int main(void) {
   } else {
     ADC_off(); // Disable battery monitoring
   }
-  ACSR   |=  (1<<7); // AC off
+  ACSR |= (1<<7); // AC off
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
-  // Enable sleep mode set to Idle that will be triggered by the sleep_mode() command.
-  // Will allow us to go idle between WDT interrupts
-  set_sleep_mode(SLEEP_MODE_IDLE);
+  set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
   WDT_on(); // Start watchdogtimer
   get_mode(); // Get mode and store with short press indicator
-  pmode=pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
+  mypwm=pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
 
-  if (pmode == MODE_STROBE) {
+  if (mypwm == MODE_STROBE) {
     mode_strobe();
-  } else if (pmode == MODE_BEACON) {
+  } else if (mypwm == MODE_BEACON) {
     mode_beacon();
-  } else if (pmode == MODE_SOS){
+  } else if (mypwm == MODE_SOS){
     mode_sos();
   } else { // All normal modes
-    smode=0;
-    mypwm=pmode;
+    smode = 0;
     set_output(mypwm);
   }
   while(1) {
