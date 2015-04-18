@@ -38,6 +38,7 @@
 // SOS settings
 #define SOS_PAUSE 5000 // Pause between SOS groups (ms)
 #define SOS_DOT 200 // Morse code dot duration (ms)
+#define SOS_OUT 255 // SOS output level (0-255)
 // Battery monitoring
 #define BATT_MON 1 // Enable battery monitoring, 0 off and 1 on
 #define BATT_TIMEOUT 10 // Number of WTD ticks between checks, each tick is 500ms
@@ -172,37 +173,34 @@ void mode_beacon(void) {
   }
 }
 
-void morse_blink(uint8_t blink) { // Morse code, 0 for short, 1 for long
-  PWM_LVL = 255;
-  if (!blink) {
+void morse_blink(uint8_t dot, uint8_t pcs, uint8_t lvl) { // Morse code
+  uint8_t i;
+  for (i = 0; i < pcs; i++) {
+    PWM_LVL = lvl;
+    if (dot) {
+      _delay_ms(SOS_DOT);
+    } else {
+      _delay_ms(3*SOS_DOT);
+    }
+    PWM_LVL = 0;
     _delay_ms(SOS_DOT);
-  } else {
-    _delay_ms(3*SOS_DOT);
   }
-  PWM_LVL = 0;
-  _delay_ms(SOS_DOT);
 }
 
 void mode_sos(void) {
   set_output(0);
   uint8_t i;
-  uint8_t j;
 
   while(1){
-    j = 0;
-    // sos group
-    while(j < 3) {
-      if (j == 0 || j == 2) {
-        for(i = 0; i < 3; ++i){
-          morse_blink(0);
-        }
+    i = 0;
+    while(i < 3) { // sos group
+      if (i == 0 || i == 2) {
+        morse_blink(1, 3, SOS_OUT);
       } else {
-        for(i = 0; i < 3; ++i){
-          morse_blink(1);
-        }
+        morse_blink(0, 3, SOS_OUT);
       }
       _delay_ms(2*SOS_DOT); // pause between chars
-      j++;
+      i++;
     }
     _delay_ms(SOS_PAUSE); // pause between groups
   }
