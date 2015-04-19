@@ -27,12 +27,14 @@
 // Strobe settings
 #define STROBE_ON 33  // Strobe frequency, tactical should be 10-20hz,
 #define STROBE_OFF 33 // default 15hz (1000ms/15hz, 33ms on/off)
-#define STROBE_GROUP 100 // Strobe group cycle (on/off) counter (0-255)
+#define STROBE_ON_OUT 255 // Output level (0-255)
+#define STROBE_OFF_OUT 0 // Output level (0-255)
+#define STROBE_GROUP 100 // Strobe group cycle (on/off) counter (10-255)
 #define STROBE_PAUSE 0 // Pause between strobe groups (ms)
-#define STROBE_PAUSE_OUT 255 // Output level during strobe pause (0-255)
+#define STROBE_PAUSE_OUT 255 // Output level (0-255)
 // Beacon settings
-#define BEACON_ON 2000  // Beacon on time (ms)
-#define BEACON_OFF 4000 // Beacon off time (ms)
+#define BEACON_ON 1000  // Beacon on time (ms)
+#define BEACON_OFF 3000 // Beacon off time (ms)
 #define BEACON_ON_OUT 255 // Beacon output level (0-255)
 #define BEACON_OFF_OUT 0 // Beacon output level (0-255)
 // SOS settings
@@ -47,7 +49,7 @@
 #define ADC_LOW_OUT 20 // Output level in low battery mode (0-255)
 // Misc settings
 #define MODE_MEMORY 0 // Mode memory, 0 off and 1 on
-#define MODE_TIMEOUT 2 // Number of WTD ticks before mode is saved, each tick is 500ms
+#define MODE_TIMEOUT 3 // Number of WTD ticks before mode is saved, each tick is 500ms
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 
 //################################
@@ -153,9 +155,9 @@ void mode_strobe(void) {
   while(1){
     set_output(0);
     for(i = 0; i < STROBE_GROUP; ++i){ // strobe group
-      PWM_LVL = 255;
+      PWM_LVL = STROBE_ON_OUT;
       _delay_ms(STROBE_ON);
-      PWM_LVL = 0;
+      PWM_LVL = STROBE_OFF_OUT;
       _delay_ms(STROBE_OFF);
     }
     set_output(STROBE_PAUSE_OUT);
