@@ -82,6 +82,7 @@ PROGMEM const uint8_t modes[] = MODES;
 const uint8_t mode_cnt = sizeof(modes);
 uint8_t mypwm = 50; // Output level
 uint8_t smode = 1; // Special mode boolean
+uint8_t spress = 0; // Short press boolean
 // ### Globals end ###
 
 void store_mode_idx(uint8_t lvl) { // central method for writing (with wear leveling)
@@ -113,7 +114,6 @@ inline void get_mode() { // Get the last mode that was saved
       eepos = pos + (i * 8);
       break;
     }
-    
   }
   if (mode_idx & 0x10) { // Indicates we did a short press last time, go to the next mode
     mode_idx &= 0x0f; // Remove short press indicator first
@@ -123,6 +123,7 @@ inline void get_mode() { // Get the last mode that was saved
     }
     store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
     mypwm=pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
+    spress = 1; // Short press boolean
   } else {
     mypwm=pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
     if (!MORSE_CODE || (mypwm != MODE_FULL)) {
@@ -172,7 +173,7 @@ void mode_strobe(void) {
   uint8_t i;
   set_output(0);
   while(smode){
-    for(i = 0; i < STROBE_GROUP; ++i){ // strobe group
+    for(i = 0; i < STROBE_GROUP; i++){ // strobe group
       PWM_LVL = STROBE_ON_OUT;
       _delay_ms(STROBE_ON);
       PWM_LVL = STROBE_OFF_OUT;
@@ -245,7 +246,9 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   static uint8_t ticks = 0;
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
-    if (!MODE_MEMORY || (MORSE_CODE && mypwm == MODE_FULL)) {
+    if (spress && MORSE_CODE && mypwm == MODE_FULL) {
+      store_mode_idx(mode_idx);
+    } else if (!MODE_MEMORY || (MORSE_CODE && mypwm == MODE_FULL)) {
       store_mode_idx(0);
     } else {
       store_mode_idx(mode_idx);
