@@ -51,6 +51,7 @@
 #define MODE_MEMORY 0 // Mode memory, 0 off and 1 on
 #define MODE_TIMEOUT 3 // Number of WTD ticks before mode is saved, each tick is 500ms
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
+#define MORSE_CODE 0 // Enable Morse code for MODE_FULL, 0 off and 1 on
 
 //################################
 //  End user tweaking
@@ -100,11 +101,10 @@ inline void read_mode_idx() {
   else eepos=0;
 }
 */
-inline void get_mode() { // Read the last mode that was saved
-  //read_mode_idx();
+inline void get_mode() { // Get the last mode that was saved
   uint8_t pos;
   uint8_t i;
-  for (i = 0; i < 8;) {
+  for (i = 0; i < 8; i++) {
     eeprom_read_block(&eep, (const void*)(i * 8), 8);
     pos = 0;
     while((eep[pos] == 0xff) && (pos < 8)) pos++;
@@ -113,16 +113,22 @@ inline void get_mode() { // Read the last mode that was saved
       eepos = pos + (i * 8);
       break;
     }
-    i++;
+    
   }
   if (mode_idx & 0x10) { // Indicates we did a short press last time, go to the next mode
     mode_idx &= 0x0f; // Remove short press indicator first
     mode_idx++;
+    if (mode_idx > (mode_cnt - 1)) {
+      mode_idx = 0; // Wrap around
+    }
+    store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
+    mypwm=pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
+  } else {
+    mypwm=pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
+    if (!MORSE_CODE || (mypwm != MODE_FULL)) {
+      store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
+    }
   }
-  if (mode_idx > (mode_cnt - 1)) {
-    mode_idx = 0; // Wrap around
-  }
-  store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
 }
 
 inline void WDT_on() {
@@ -164,8 +170,8 @@ void set_output(uint8_t pwm_lvl) {
 
 void mode_strobe(void) {
   uint8_t i;
+  set_output(0);
   while(smode){
-    set_output(0);
     for(i = 0; i < STROBE_GROUP; ++i){ // strobe group
       PWM_LVL = STROBE_ON_OUT;
       _delay_ms(STROBE_ON);
@@ -174,6 +180,7 @@ void mode_strobe(void) {
     }
     set_output(STROBE_PAUSE_OUT);
     _delay_ms(STROBE_PAUSE); // pause between groups
+    set_output(0);
   }
 }
 
@@ -183,6 +190,7 @@ void mode_beacon(void) {
     _delay_ms(BEACON_ON);
     set_output(BEACON_OFF_OUT);
     _delay_ms(BEACON_OFF);
+    set_output(0);
   }
 }
 
@@ -193,7 +201,7 @@ void morse_blink(uint8_t dot, uint8_t pcs, uint8_t lvl) { // Morse code
     if (dot) {
       _delay_ms(SOS_DOT);
     } else {
-      _delay_ms(3*SOS_DOT);
+      _delay_ms(3 * SOS_DOT);
     }
     PWM_LVL = 0;
     _delay_ms(SOS_DOT);
@@ -205,15 +213,13 @@ void mode_sos(void) {
   uint8_t i;
 
   while(smode){
-    i = 0;
-    while(i < 3) { // sos group
+    for (i = 0; i < 3; i++) { // sos group
       if (i == 0 || i == 2) {
         morse_blink(1, 3, SOS_OUT);
       } else {
         morse_blink(0, 3, SOS_OUT);
       }
       _delay_ms(2*SOS_DOT); // pause between chars
-      i++;
     }
     _delay_ms(SOS_PAUSE); // pause between groups
   }
@@ -238,14 +244,13 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   static uint8_t lowbatt_mode = 0;
   static uint8_t ticks = 0;
   if (ticks < 255) ticks++;
-  if (ticks == MODE_TIMEOUT) {
-    if (!MODE_MEMORY) {
+  if (ticks == MODE_TIMEOUT) { // Lock mode
+    if (!MODE_MEMORY || (MORSE_CODE && mypwm == MODE_FULL)) {
       store_mode_idx(0);
     } else {
       store_mode_idx(mode_idx);
     }
   }
-
   if (BATT_MON && ticks == 255) {
     ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
     if (lowbatt_mode == 0) {
@@ -282,8 +287,7 @@ int main(void) {
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
   WDT_on(); // Start watchdogtimer
-  get_mode(); // Get mode and store with short press indicator
-  mypwm=pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
+  get_mode(); // Get mode identifier
 
   if (mypwm == MODE_STROBE) {
     mode_strobe();
