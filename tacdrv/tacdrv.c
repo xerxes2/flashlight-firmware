@@ -74,7 +74,7 @@
 
 // ### Globals start ###
 uint8_t eepos = 0;
-uint8_t eep[32];
+uint8_t eep[8];
 uint8_t mode_idx = 0;
 PROGMEM const uint8_t modes[]=MODES;
 const uint8_t mode_cnt = sizeof(modes);
@@ -82,35 +82,46 @@ uint8_t mypwm = 50; // Output level
 uint8_t smode = 1; // Special mode boolean
 // ### Globals end ###
 
-void store_mode_idx(uint8_t lvl) {  // central method for writing (with wear leveling)
-  uint8_t oldpos=eepos;
-  eepos=(eepos+1)&31;  // wear leveling, use next cell
+void store_mode_idx(uint8_t lvl) { // central method for writing (with wear leveling)
+  uint8_t oldpos = eepos;
+  eepos=(eepos+1) & 63; // wear leveling, use next cell
   // Write the current mode
   EEARL=eepos; EEDR=lvl; EECR=32+4; EECR=32+4+2; // WRITE  32:write only (no erase)  4:enable  2:go
   while(EECR & 2); // wait for completion
   // Erase the last mode
   EEARL=oldpos; EECR=16+4; EECR=16+4+2; // ERASE  16:erase only (no write)  4:enable  2:go
 }
-
+/*
 inline void read_mode_idx() {
   eeprom_read_block(&eep, 0, 32);
   while((eep[eepos] == 0xff) && (eepos < 32)) eepos++;
   if (eepos < 32) mode_idx = eep[eepos]; // &0x10; What the?
   else eepos=0;
 }
-
-inline void get_mode() {
-  read_mode_idx(); // Read the last mode that was saved
-  if (mode_idx&0x10) {
-    // Indicates we did a short press last time, go to the next mode
-    // Remove short press indicator first
-    mode_idx &= 0x0f;
+*/
+inline void get_mode() { // Read the last mode that was saved
+  //read_mode_idx();
+  uint8_t pos;
+  uint8_t i;
+  for (i = 0; i < 8;) {
+    eeprom_read_block(&eep, (const void*)(i * 8), 8);
+    pos = 0;
+    while((eep[pos] == 0xff) && (pos < 8)) pos++;
+    if (pos < 8) {
+      mode_idx = eep[pos];
+      eepos = pos + (i * 8);
+      break;
+    }
+    i++;
+  }
+  if (mode_idx & 0x10) { // Indicates we did a short press last time, go to the next mode
+    mode_idx &= 0x0f; // Remove short press indicator first
     mode_idx++;
   }
   if (mode_idx > (mode_cnt - 1)) {
     mode_idx = 0; // Wrap around
   }
-  store_mode_idx(mode_idx|0x10); // Store mode with short press indicator
+  store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
 }
 
 inline void WDT_on() {
