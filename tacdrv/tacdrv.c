@@ -67,10 +67,12 @@
 #include <avr/sleep.h>
 
 #define PWM_PIN PB1 // Default PWM pin
+#define PWM_LVL OCR0B // OCR0B is the output compare register for PB1
+#define PWM_FAST 0b00100011; // fast-PWM
+#define PWM_PHASE 0b00100001; // phase corrected PWM
 #define ADC_CHANNEL 0x01 // MUX 01 corresponds with PB2
 #define ADC_DIDR ADC1D // Digital input disable bit corresponding with PB2
 #define ADC_PRSCL 0x06 // clk/64
-#define PWM_LVL OCR0B // OCR0B is the output compare register for PB1
 
 // ### Globals start ###
 uint8_t eepos = 0;
@@ -154,9 +156,9 @@ inline void ADC_off() {
 
 void set_output(uint8_t pwm_lvl) {
   if (pwm_lvl > FAST_PWM_START) {
-    TCCR0A = 0b00100011; // fast-PWM
+    TCCR0A = PWM_FAST; // fast-PWM
   } else {
-    TCCR0A = 0b00100001; // phase corrected PWM
+    TCCR0A = PWM_PHASE; // phase corrected PWM
   }
   PWM_LVL = pwm_lvl;
 }
