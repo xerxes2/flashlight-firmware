@@ -1,3 +1,3 @@
 # Flashlight Firmware Repository
-TacDrv - tactical firmware for flashlight drivers
+TacDrv - tactical firmware for 105d drivers
 ---------------
