@@ -77,7 +77,7 @@
 uint8_t eepos = 0;
 uint8_t eep[8];
 uint8_t mode_idx = 0;
-PROGMEM const uint8_t modes[]=MODES;
+PROGMEM const uint8_t modes[] = MODES;
 const uint8_t mode_cnt = sizeof(modes);
 uint8_t mypwm = 50; // Output level
 uint8_t smode = 1; // Special mode boolean
@@ -164,7 +164,7 @@ void set_output(uint8_t pwm_lvl) {
 
 void mode_strobe(void) {
   uint8_t i;
-  while(1){
+  while(smode){
     set_output(0);
     for(i = 0; i < STROBE_GROUP; ++i){ // strobe group
       PWM_LVL = STROBE_ON_OUT;
@@ -178,7 +178,7 @@ void mode_strobe(void) {
 }
 
 void mode_beacon(void) {
-  while(1){
+  while(smode){
     set_output(BEACON_ON_OUT);
     _delay_ms(BEACON_ON);
     set_output(BEACON_OFF_OUT);
@@ -204,7 +204,7 @@ void mode_sos(void) {
   set_output(0);
   uint8_t i;
 
-  while(1){
+  while(smode){
     i = 0;
     while(i < 3) { // sos group
       if (i == 0 || i == 2) {
@@ -261,6 +261,7 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
       }
     } else {
       if (low_voltage(ADC_CRIT)) {
+        smode = 0; // Turn off special mode
         WDT_off(); // Disable WDT so it doesn't wake us up
         set_output(0); // Turn off the light
         set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
