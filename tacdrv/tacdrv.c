@@ -161,7 +161,7 @@ inline void ADC_off() {
 }
 
 void set_output(uint8_t pwm_lvl) {
-  if (pwm_lvl > FAST_PWM_START) {
+  if (pwm_lvl > FAST_PWM_START && pwm_lvl != 255) {
     TCCR0A = PWM_FAST; // fast-PWM
   } else {
     TCCR0A = PWM_PHASE; // phase corrected PWM
