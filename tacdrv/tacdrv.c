@@ -118,14 +118,13 @@ inline void get_mode() { // Get the last mode that was saved
   if (mode_idx & 0x10) { // Indicates we did a short press last time, go to the next mode
     mode_idx &= 0x0f; // Remove short press indicator first
     mode_idx++;
-    if (mode_idx > (mode_cnt - 1)) {
-      mode_idx = 0; // Wrap around
-    }
-    store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
     spress = 1; // Short press boolean
   }
+  if (mode_idx > (mode_cnt - 1)) {
+      mode_idx = 0; // Wrap around
+  }
   mypwm = pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
-  if (!spress && (mypwm != MORSE_CODE)) {
+  if (spress || (!spress && (mypwm != MORSE_CODE))) {
     store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
   }
 }
@@ -245,8 +244,10 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   if (ticks == MODE_TIMEOUT) { // Lock mode
     if (spress && mypwm == MORSE_CODE) {
       store_mode_idx(mode_idx);
-    } else if (!MODE_MEMORY || (mypwm == MORSE_CODE)) {
+    } else if (!MODE_MEMORY) {
       store_mode_idx(0);
+    } else if (mypwm == MORSE_CODE) {
+      store_mode_idx(mode_idx++);
     } else {
       store_mode_idx(mode_idx);
     }
