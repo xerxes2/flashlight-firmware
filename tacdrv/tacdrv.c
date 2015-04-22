@@ -11,10 +11,10 @@
 //###############################################################
 
 // Mode output levels
-#define MODE_MOON 10 // Output level (0-255)
-#define MODE_LOW 20 // Output level (0-255)
-#define MODE_MID 120 // Output level (0-255)
-#define MODE_HIGH 200 // Output level (0-255)
+#define MODE_MOON 10 // Output level (1-255)
+#define MODE_LOW 20 // Output level (1-255)
+#define MODE_MID 120 // Output level (1-255)
+#define MODE_HIGH 200 // Output level (1-255)
 #define MODE_FULL 255 // Full output, no PWM
 // Identifiers for special modes
 #define MODE_STROBE 254 // Just an id dummy number, must not be used for other modes!
@@ -51,7 +51,7 @@
 #define MODE_MEMORY 0 // Mode memory, 0 off and 1 on
 #define MODE_TIMEOUT 3 // Number of WTD ticks before mode is saved, each tick is 500ms
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
-#define MORSE_CODE 0 // Enable Morse code for MODE_FULL, 0 off and 1 on
+#define MORSE_CODE 0 // Morse code output level, existing normal mode (i.e 255), 0 off
 
 //################################
 //  End user tweaking
@@ -125,7 +125,7 @@ inline void get_mode() { // Get the last mode that was saved
     spress = 1; // Short press boolean
   }
   mypwm = pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
-  if (!spress && (!MORSE_CODE || (mypwm != MODE_FULL))) {
+  if (!spress && (mypwm != MORSE_CODE)) {
     store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
   }
 }
@@ -243,9 +243,9 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   static uint8_t ticks = 0;
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
-    if (spress && MORSE_CODE && mypwm == MODE_FULL) {
+    if (spress && mypwm == MORSE_CODE) {
       store_mode_idx(mode_idx);
-    } else if (!MODE_MEMORY || (MORSE_CODE && mypwm == MODE_FULL)) {
+    } else if (!MODE_MEMORY || (mypwm == MORSE_CODE)) {
       store_mode_idx(0);
     } else {
       store_mode_idx(mode_idx);
