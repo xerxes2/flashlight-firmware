@@ -242,14 +242,14 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   static uint8_t ticks = 0;
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
-    if (spress && mypwm == MORSE_CODE) {
+    if (spress && mypwm == MORSE_CODE) { // Lock Morse code
       store_mode_idx(mode_idx);
-    } else if (!MODE_MEMORY) {
-      store_mode_idx(0);
-    } else if (mypwm == MORSE_CODE) {
+    } else if (mypwm == MORSE_CODE) { // Unlock Morse code
       store_mode_idx(mode_idx++);
-    } else {
+    } else if (MODE_MEMORY) { // Save Mode
       store_mode_idx(mode_idx);
+    } else {
+      store_mode_idx(0); // No mode memory
     }
   }
   if (BATT_MON && ticks == 255) {
