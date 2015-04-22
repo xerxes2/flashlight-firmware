@@ -49,9 +49,11 @@
 #define ADC_LOW_OUT 20 // Output level in low battery mode (0-255)
 // Misc settings
 #define MODE_MEMORY 0 // Mode memory, 0 off and 1 on
-#define MODE_TIMEOUT 3 // Number of WTD ticks before mode is saved, each tick is 500ms
+#define MODE_TIMEOUT 3 // Number of WTD ticks before mode is saved, each tick is 500ms (1-255)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define MORSE_CODE 0 // Morse code output level, existing normal mode (i.e 255), 0 off
+#define MODE_FULL_TIMEOUT 0 // Number of WTD ticks before lower output, each tick is 500ms, 0 off (0-255)
+#define MODE_FULL_LOW 100 // Output level (0-255)
 
 //################################
 //  End user tweaking
@@ -124,7 +126,7 @@ inline void get_mode() { // Get the last mode that was saved
       mode_idx = 0; // Wrap around
   }
   mypwm = pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
-  if (spress || (!spress && (mypwm != MORSE_CODE))) {
+  if (spress || (mypwm != MORSE_CODE)) {
     store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
   }
 }
@@ -251,6 +253,10 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
     } else {
       store_mode_idx(0); // No mode memory
     }
+  }
+  if (mypwm == 255 && ticks == MODE_FULL_TIMEOUT) { // MODE_FULL timeout
+    mypwm = MODE_FULL_LOW;
+    set_output(mypwm);
   }
   if (BATT_MON && ticks == 255) {
     ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
