@@ -122,13 +122,11 @@ inline void get_mode() { // Get the last mode that was saved
       mode_idx = 0; // Wrap around
     }
     store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
-    mypwm=pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
     spress = 1; // Short press boolean
-  } else {
-    mypwm=pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
-    if (!MORSE_CODE || (mypwm != MODE_FULL)) {
-      store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
-    }
+  }
+  mypwm = pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
+  if (!spress && (!MORSE_CODE || (mypwm != MODE_FULL))) {
+    store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
   }
 }
 
@@ -212,7 +210,6 @@ void morse_blink(uint8_t dot, uint8_t pcs, uint8_t lvl) { // Morse code
 void mode_sos(void) {
   set_output(0);
   uint8_t i;
-
   while(smode){
     for (i = 0; i < 3; i++) { // sos group
       if (i == 0 || i == 2) {
@@ -291,7 +288,6 @@ int main(void) {
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
   WDT_on(); // Start watchdogtimer
   get_mode(); // Get mode identifier
-
   if (mypwm == MODE_STROBE) {
     mode_strobe();
   } else if (mypwm == MODE_BEACON) {
