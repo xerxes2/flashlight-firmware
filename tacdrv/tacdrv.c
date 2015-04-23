@@ -159,8 +159,8 @@ inline void ADC_off() {
   ADCSRA &= ~(1<<7); // ADC off
 }
 */
-inline void ADC_ctrl(uint8_t adc_on) {
-  if (adc_on) {
+inline void ADC_ctrl() {
+  if (BATT_MON) {
     ADMUX  = (1 << REFS0) | (1 << ADLAR) | ADC_CHANNEL; // 1.1v reference, left-adjust, ADC1/PB2
     DIDR0 |= (1 << ADC_DIDR); // disable digital input on ADC pin to reduce power consumption
     ADCSRA = (1 << ADEN ) | (1 << ADSC ) | ADC_PRSCL; // enable, start, prescale
@@ -302,7 +302,7 @@ int main(void) {
     ADC_off(); // Disable battery monitoring
   }
   */
-  ADC_ctrl(BATT_MON); // Battery monitoring
+  ADC_ctrl(); // Battery monitoring
   ACSR |= (1<<7); // AC off
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
