@@ -168,7 +168,7 @@ void set_output(uint8_t pwm_lvl) {
   PWM_LVL = pwm_lvl;
 }
 
-void mode_strobe(void) {
+static inline void mode_strobe(void) {
   uint8_t i;
   set_output(0);
   while(smode){
@@ -184,7 +184,7 @@ void mode_strobe(void) {
   }
 }
 
-void mode_beacon(void) {
+static inline void mode_beacon(void) {
   while(smode){
     set_output(BEACON_ON_OUT);
     _delay_ms(BEACON_ON);
@@ -208,7 +208,7 @@ void morse_blink(uint8_t dot, uint8_t pcs, uint8_t lvl) { // Morse code
   }
 }
 
-void mode_sos(void) {
+static inline void mode_sos(void) {
   set_output(0);
   uint8_t i;
   while(smode){

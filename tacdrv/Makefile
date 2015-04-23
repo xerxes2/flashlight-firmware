@@ -2,7 +2,7 @@ PROGRAM = tacdrv
 MCU = attiny13
 CC = avr-gcc
 OBJCOPY = avr-objcopy
-CFLAGS += -Wall -g -Os -mmcu=$(MCU)
+CFLAGS += -Wall -g -Os -std=c99 -mmcu=$(MCU)
 LDFLAGS +=
 OBJS = $(PROGRAM).o
 # uncomment to remove raw commands from build output
@@ -39,3 +39,4 @@ clean:
 	$(Q)rm -f *.elf
 	@printf "  CLEAN   $(PROGRAM).hex\n"
 	$(Q)rm -f $(PROGRAM).hex
+
