@@ -159,57 +159,56 @@ inline void ADC_ctrl() {
   }
 }
 
-void set_output(uint8_t pwm_lvl) {
-  if (pwm_lvl > FAST_PWM_START && pwm_lvl != 255) {
-    TCCR0A = PWM_FAST; // fast-PWM
-  } else {
-    TCCR0A = PWM_PHASE; // phase corrected PWM
+void set_output(uint8_t pwm_lvl, uint8_t pwm_mode) {
+  if (pwm_mode) {
+    if (pwm_lvl > FAST_PWM_START && pwm_lvl != 255) {
+      TCCR0A = PWM_FAST; // fast-PWM
+    } else {
+      TCCR0A = PWM_PHASE; // phase corrected PWM
+    }
   }
   PWM_LVL = pwm_lvl;
 }
 
 static inline void mode_strobe(void) {
   uint8_t i;
-  set_output(0);
   while(1){
+    set_output(0, 1);
     for(i = 0; i < STROBE_GROUP; i++){ // strobe group
-      PWM_LVL = STROBE_ON_OUT;
+      set_output(STROBE_ON_OUT, 0);
       _delay_ms(STROBE_ON);
-      PWM_LVL = STROBE_OFF_OUT;
+      set_output(STROBE_OFF_OUT, 0);
       _delay_ms(STROBE_OFF);
     }
-    set_output(STROBE_PAUSE_OUT);
+    set_output(STROBE_PAUSE_OUT, 1);
     _delay_ms(STROBE_PAUSE); // pause between groups
-    set_output(0);
   }
 }
 
 static inline void mode_beacon(void) {
   while(1){
-    set_output(BEACON_ON_OUT);
+    set_output(BEACON_ON_OUT, 1);
     _delay_ms(BEACON_ON);
-    set_output(BEACON_OFF_OUT);
+    set_output(BEACON_OFF_OUT, 1);
     _delay_ms(BEACON_OFF);
-    set_output(0);
   }
 }
 
 void morse_blink(uint8_t dot, uint8_t pcs, uint8_t lvl) { // Morse code
   uint8_t i;
   for (i = 0; i < pcs; i++) {
-    PWM_LVL = lvl;
+    set_output(lvl, 1);
     if (dot) {
       _delay_ms(SOS_DOT);
     } else {
       _delay_ms(3 * SOS_DOT);
     }
-    PWM_LVL = 0;
+    set_output(0, 1);
     _delay_ms(SOS_DOT);
   }
 }
 
 static inline void mode_sos(void) {
-  set_output(0);
   uint8_t i;
   while(1){
     for (i = 0; i < 3; i++) { // sos group
@@ -244,7 +243,7 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   static uint8_t ticks = 0;
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
-    if (!spress && mypwm == MORSE_CODE) { // Unock Morse code
+    if (!spress && mypwm == MORSE_CODE) { // Unlock Morse code
       store_mode_idx(mode_idx++);
     } else if (MODE_MEMORY || (mypwm == MORSE_CODE)) { // Save Mode
       store_mode_idx(mode_idx);
@@ -254,7 +253,7 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   }
   if (mypwm == 255 && ticks == MODE_FULL_TIMEOUT) { // MODE_FULL timeout
     mypwm = MODE_FULL_LOW;
-    set_output(mypwm);
+    set_output(mypwm, 1);
   }
   if (BATT_MON && ticks == 255) {
     ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
@@ -266,13 +265,12 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
             mypwm = ADC_LOW_OUT; // Lower output if not in special mode
           }
           morse_blink(1, 5, mypwm); // Flash a few times
-          set_output(mypwm);
+          set_output(mypwm, 1);
         }
       }
     } else {
       if (low_voltage(ADC_CRIT)) {
         WDT_off(); // Disable WDT so it doesn't wake us up
-        set_output(0); // Turn off the light
         set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
         sleep_mode();
       }
@@ -282,10 +280,10 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
 
 int main(void) {
   DDRB = (1 << PWM_PIN); // Set PWM pin to output
-  ADC_ctrl(); // Battery monitoring
   ACSR |= (1<<7); // AC (Analog Comparator) off
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
+  ADC_ctrl(); // Battery monitoring
   WDT_on(); // Start watchdogtimer
   get_mode(); // Get mode identifier and store with short press indicator
   if (mypwm == MODE_STROBE) {
@@ -296,7 +294,7 @@ int main(void) {
     mode_sos();
   } else { // All normal modes
     smode = 0; // Special mode boolean
-    set_output(mypwm);
+    set_output(mypwm, 1);
   }
   while(1) {
     sleep_mode(); // Enter sleep mode
