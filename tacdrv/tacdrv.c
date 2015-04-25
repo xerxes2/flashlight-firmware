@@ -43,7 +43,7 @@
 #define SOS_OUT 255 // SOS output level (0-255)
 // Battery monitoring
 #define BATT_MON 1 // Enable battery monitoring, 0 off and 1 on
-#define BATT_TIMEOUT 10 // Number of WTD ticks between checks, each tick is 500ms
+#define BATT_TIMEOUT 20 // Number of WTD ticks between checks, each tick is 500ms (10-200)
 #define ADC_LOW 130 // When do we start ramping
 #define ADC_CRIT 120 // When do we shut the light off
 #define ADC_LOW_OUT 20 // Output level in low battery mode (0-255)
@@ -76,7 +76,7 @@
 #include <avr/pgmspace.h>
 #include <avr/sleep.h>
 
-// ### Globals start ###
+//### Globals start ###
 uint8_t eepos = 0;
 uint8_t eep[8];
 uint8_t mode_idx = 0;
@@ -85,7 +85,7 @@ const uint8_t mode_cnt = sizeof(modes);
 uint8_t mypwm = 50; // Output level
 uint8_t smode = 1; // Special mode boolean
 uint8_t spress = 0; // Short press boolean
-// ### Globals end ###
+//### Globals end ###
 
 void store_mode_idx(uint8_t lvl) { // central method for writing (with wear leveling)
   uint8_t oldpos = eepos;
@@ -244,14 +244,12 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   static uint8_t ticks = 0;
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
-    if (spress && mypwm == MORSE_CODE) { // Lock Morse code
-      store_mode_idx(mode_idx);
-    } else if (mypwm == MORSE_CODE) { // Unlock Morse code
+    if (!spress && mypwm == MORSE_CODE) { // Unock Morse code
       store_mode_idx(mode_idx++);
-    } else if (MODE_MEMORY) { // Save Mode
+    } else if (MODE_MEMORY || (mypwm == MORSE_CODE)) { // Save Mode
       store_mode_idx(mode_idx);
-    } else {
-      store_mode_idx(0); // No mode memory
+    } else { // No mode memory
+      store_mode_idx(0);
     }
   }
   if (mypwm == 255 && ticks == MODE_FULL_TIMEOUT) { // MODE_FULL timeout
