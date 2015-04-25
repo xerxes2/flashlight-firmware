@@ -53,7 +53,7 @@
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define MORSE_CODE 0 // Morse code output level, existing normal mode (i.e 255), 0 off
 #define MODE_FULL_TIMEOUT 0 // Number of WTD ticks before lower output, each tick is 500ms, 0 off (0-255)
-#define MODE_FULL_LOW 100 // Output level (0-255)
+#define MODE_FULL_LOW 150 // Output level (1-255)
 
 //################################
 //  End user tweaking
@@ -117,9 +117,9 @@ inline void get_mode() { // Get the last mode that was saved
       break;
     }
   }
-  if (mode_idx & 0x10) { // Indicates we did a short press last time, go to the next mode
-    mode_idx &= 0x0f; // Remove short press indicator first
-    mode_idx++;
+  if (mode_idx & 0x10) { // Indicates we did a short press last time
+    mode_idx &= 0x0f; // Remove short press indicator
+    mode_idx++; // Go to the next mode
     spress = 1; // Short press boolean
   }
   if (mode_idx > (mode_cnt - 1)) {
@@ -148,17 +148,7 @@ inline void WDT_off() {
   WDTCR = 0x00; // Disable WDT
   sei(); // Enable interrupts
 }
-/*
-inline void ADC_on() {
-  ADMUX  = (1 << REFS0) | (1 << ADLAR) | ADC_CHANNEL; // 1.1v reference, left-adjust, ADC1/PB2
-  DIDR0 |= (1 << ADC_DIDR); // disable digital input on ADC pin to reduce power consumption
-  ADCSRA = (1 << ADEN ) | (1 << ADSC ) | ADC_PRSCL; // enable, start, prescale
-}
 
-inline void ADC_off() {
-  ADCSRA &= ~(1<<7); // ADC off
-}
-*/
 inline void ADC_ctrl() {
   if (BATT_MON) {
     ADMUX  = (1 << REFS0) | (1 << ADLAR) | ADC_CHANNEL; // 1.1v reference, left-adjust, ADC1/PB2
@@ -181,7 +171,7 @@ void set_output(uint8_t pwm_lvl) {
 static inline void mode_strobe(void) {
   uint8_t i;
   set_output(0);
-  while(smode){
+  while(1){
     for(i = 0; i < STROBE_GROUP; i++){ // strobe group
       PWM_LVL = STROBE_ON_OUT;
       _delay_ms(STROBE_ON);
@@ -195,7 +185,7 @@ static inline void mode_strobe(void) {
 }
 
 static inline void mode_beacon(void) {
-  while(smode){
+  while(1){
     set_output(BEACON_ON_OUT);
     _delay_ms(BEACON_ON);
     set_output(BEACON_OFF_OUT);
@@ -221,7 +211,7 @@ void morse_blink(uint8_t dot, uint8_t pcs, uint8_t lvl) { // Morse code
 static inline void mode_sos(void) {
   set_output(0);
   uint8_t i;
-  while(smode){
+  while(1){
     for (i = 0; i < 3; i++) { // sos group
       if (i == 0 || i == 2) {
         morse_blink(1, 3, SOS_OUT);
@@ -270,7 +260,7 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   }
   if (BATT_MON && ticks == 255) {
     ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
-    if (lowbatt_mode == 0) {
+    if (!lowbatt_mode) {
       if (low_voltage(ADC_LOW)) {
         lowbatt_mode = 1;
         if (!smode) {
@@ -283,7 +273,6 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
       }
     } else {
       if (low_voltage(ADC_CRIT)) {
-        smode = 0; // Turn off special mode
         WDT_off(); // Disable WDT so it doesn't wake us up
         set_output(0); // Turn off the light
         set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
@@ -295,19 +284,12 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
 
 int main(void) {
   DDRB = (1 << PWM_PIN); // Set PWM pin to output
-  /*
-  if (BATT_MON) {
-    ADC_on(); // Enable battery monitoring
-  } else {
-    ADC_off(); // Disable battery monitoring
-  }
-  */
   ADC_ctrl(); // Battery monitoring
-  ACSR |= (1<<7); // AC off
+  ACSR |= (1<<7); // AC (Analog Comparator) off
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
   WDT_on(); // Start watchdogtimer
-  get_mode(); // Get mode identifier
+  get_mode(); // Get mode identifier and store with short press indicator
   if (mypwm == MODE_STROBE) {
     mode_strobe();
   } else if (mypwm == MODE_BEACON) {
@@ -315,11 +297,11 @@ int main(void) {
   } else if (mypwm == MODE_SOS){
     mode_sos();
   } else { // All normal modes
-    smode = 0;
+    smode = 0; // Special mode boolean
     set_output(mypwm);
   }
   while(1) {
-    sleep_mode();
+    sleep_mode(); // Enter sleep mode
   }
   return 0;
 }
