@@ -271,6 +271,7 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
     } else {
       if (low_voltage(ADC_CRIT)) {
         WDT_off(); // Disable WDT so it doesn't wake us up
+        ADCSRA &= ~(1<<7); // ADC off
         set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
         sleep_mode();
       }
