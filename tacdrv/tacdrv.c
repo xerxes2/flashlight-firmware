@@ -43,16 +43,16 @@
 #define SOS_OUT 255 // SOS output level (0-255)
 // Battery monitoring
 #define BATT_MON 1 // Enable battery monitoring, 0 off and 1 on
-#define BATT_TIMEOUT 20 // Number of WTD ticks between checks, each tick is 500ms (10-200)
+#define BATT_TIMEOUT 20 // Number of WTD ticks between checks, each tick is 1s (10-200)
 #define ADC_LOW 130 // When do we start ramping
 #define ADC_CRIT 120 // When do we shut the light off
 #define ADC_LOW_OUT 20 // Output level in low battery mode (0-255)
 // Misc settings
 #define MODE_MEMORY 0 // Mode memory, 0 off and 1 on
-#define MODE_TIMEOUT 3 // Number of WTD ticks before mode is saved, each tick is 500ms (1-255)
+#define MODE_TIMEOUT 2 // Number of WTD ticks before mode is saved, each tick is 1s (1-255)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define MORSE_CODE 0 // Morse code output level, existing normal mode (i.e 255), 0 off
-#define MODE_FULL_TIMEOUT 0 // Number of WTD ticks before lower output, each tick is 500ms, 0 off (0-255)
+#define MODE_FULL_TIMEOUT 0 // Number of WTD ticks before lower output, each tick is 1s, 0 off (0-255)
 #define MODE_FULL_LOW 150 // Output level (1-255)
 
 //################################
@@ -104,16 +104,16 @@ inline void read_mode_idx() {
   else eepos=0;
 }
 */
-inline void get_mode() { // Get the last mode that was saved
+inline void get_mode() { // Get mode and store with short press indicator
   uint8_t pos;
   uint8_t i;
-  for (i = 0; i < 8; i++) {
-    eeprom_read_block(&eep, (const void*)(i * 8), 8);
+  for (i = 0; i < 8; i++) { // Loop array eight times if needed
+    eeprom_read_block(&eep, (const void*)(i * 8), 8); // Read eight bytes from eeprom
     pos = 0;
     while((eep[pos] == 0xff) && (pos < 8)) pos++;
-    if (pos < 8) {
-      mode_idx = eep[pos];
-      eepos = pos + (i * 8);
+    if (pos < 8) { // Stored byte was found
+      mode_idx = eep[pos]; // Mode position in modes array
+      eepos = pos + (i * 8); // Mode position in eeprom
       break;
     }
   }
@@ -136,7 +136,7 @@ inline void WDT_on() {
   cli(); // Disable interrupts
   wdt_reset(); // Reset the WDT
   WDTCR |= (1<<WDCE) | (1<<WDE); // Start timed sequence
-  WDTCR = (1<<WDTIE) | (1<<WDP2) | (1<<WDP0); // Enable interrupt every 500ms
+  WDTCR = (1<<WDTIE) | (1<<WDP2) | (1<<WDP1); // Enable interrupt every second
   sei(); // Enable interrupts
 }
 
