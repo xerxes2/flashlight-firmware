@@ -149,6 +149,16 @@ inline void WDT_off() {
   sei(); // Enable interrupts
 }
 
+inline void ADC_ctrl(void) { // Battery monitoring
+  if (BATT_MON) {
+    ADMUX  = (1 << REFS0) | (1 << ADLAR) | ADC_CHANNEL; // 1.1v reference, left-adjust, ADC1/PB2
+    DIDR0 |= (1 << ADC_DIDR); // disable digital input on ADC pin to reduce power consumption
+    ADCSRA = (1 << ADEN ) | (1 << ADSC ) | ADC_PRSCL; // enable, start, prescale
+  } else {
+    ADCSRA &= ~(1<<7); // ADC off
+  }
+}
+
 void set_output(uint8_t pwm_lvl, uint8_t pwm_mode) {
   if (pwm_mode) {
     if (pwm_lvl > FAST_PWM_START && pwm_lvl != 255) {
@@ -274,13 +284,7 @@ int main(void) {
   ACSR |= (1<<7); // AC (Analog Comparator) off
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
-  if (BATT_MON) { // Battery monitoring
-    ADMUX  = (1 << REFS0) | (1 << ADLAR) | ADC_CHANNEL; // 1.1v reference, left-adjust, ADC1/PB2
-    DIDR0 |= (1 << ADC_DIDR); // disable digital input on ADC pin to reduce power consumption
-    ADCSRA = (1 << ADEN ) | (1 << ADSC ) | ADC_PRSCL; // enable, start, prescale
-  } else {
-    ADCSRA &= ~(1<<7); // ADC off
-  }
+  ADC_ctrl(); // Battery monitoring
   WDT_on(); // Start watchdogtimer
   get_mode(); // Get mode identifier and store with short press indicator
   if (mypwm == MODE_STROBE) {
