@@ -78,11 +78,10 @@
 
 //### Globals start ###
 uint8_t eepos = 0;
-uint8_t eep[8];
 uint8_t mode_idx = 0;
 PROGMEM const uint8_t modes[] = MODES;
 const uint8_t mode_cnt = sizeof(modes);
-uint8_t mypwm = 50; // Output level
+uint8_t mypwm = 200; // Output level
 uint8_t smode = 1; // Special mode boolean
 uint8_t spress = 0; // Short press boolean
 //### Globals end ###
@@ -96,24 +95,13 @@ void store_mode_idx(uint8_t lvl) { // central method for writing (with wear leve
   // Erase the last mode
   EEARL=oldpos; EECR=16+4; EECR=16+4+2; // ERASE  16:erase only (no write)  4:enable  2:go
 }
-/*
-inline void read_mode_idx() {
-  eeprom_read_block(&eep, 0, 32);
-  while((eep[eepos] == 0xff) && (eepos < 32)) eepos++;
-  if (eepos < 32) mode_idx = eep[eepos]; // &0x10; What the?
-  else eepos=0;
-}
-*/
+
 inline void get_mode() { // Get mode and store with short press indicator
-  uint8_t pos;
-  uint8_t i;
-  for (i = 0; i < 8; i++) { // Loop array eight times if needed
-    eeprom_read_block(&eep, (const void*)(i * 8), 8); // Read eight bytes from eeprom
-    pos = 0;
-    while((eep[pos] == 0xff) && (pos < 8)) pos++;
-    if (pos < 8) { // Stored byte was found
-      mode_idx = eep[pos]; // Mode position in modes array
-      eepos = pos + (i * 8); // Mode position in eeprom
+  uint8_t eep;
+  for(eepos=0; eepos<64; eepos++) {
+    eep = eeprom_read_byte((const uint8_t *)(uint16_t)eepos);
+    if (eep != 0xff) {
+      mode_idx = eep; // Mode position in modes array
       break;
     }
   }
