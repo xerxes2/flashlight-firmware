@@ -81,7 +81,7 @@ uint8_t eepos = 0;
 uint8_t mode_idx = 0;
 PROGMEM const uint8_t modes[] = MODES;
 const uint8_t mode_cnt = sizeof(modes);
-uint8_t mypwm = 200; // Output level
+uint8_t mypwm = 100; // Output level
 uint8_t smode = 1; // Special mode boolean
 uint8_t spress = 0; // Short press boolean
 //### Globals end ###
@@ -232,7 +232,7 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
     if (!spress && mypwm == MORSE_CODE) { // Unlock Morse code
-      store_mode_idx(mode_idx++);
+      store_mode_idx(++mode_idx);
     } else if (MODE_MEMORY || (mypwm == MORSE_CODE)) { // Save Mode
       store_mode_idx(mode_idx);
     } else { // No mode memory
