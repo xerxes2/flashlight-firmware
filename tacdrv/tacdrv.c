@@ -110,7 +110,7 @@ inline void get_mode() { // Get mode and store with short press indicator
     mode_idx++; // Go to the next mode
     spress = 1; // Short press boolean
   }
-  if (mode_idx > (mode_cnt - 1)) {
+  if (mode_idx >= mode_cnt) {
       mode_idx = 0; // Wrap around
   }
   mypwm = pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
