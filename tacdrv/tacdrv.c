@@ -86,19 +86,9 @@ uint8_t smode = 1; // Special mode boolean
 uint8_t spress = 0; // Short press boolean
 //### Globals end ###
 
-void store_mode_idx(uint8_t lvl) { // central method for writing (with wear leveling)
-  uint8_t oldpos = eepos;
-  eepos=(eepos+1) & 63; // wear leveling, use next cell
-  // Write the current mode
-  EEARL=eepos; EEDR=lvl; EECR=32+4; EECR=32+4+2; // WRITE  32:write only (no erase)  4:enable  2:go
-  while(EECR & 2); // wait for completion
-  // Erase the last mode
-  EEARL=oldpos; EECR=16+4; EECR=16+4+2; // ERASE  16:erase only (no write)  4:enable  2:go
-}
-
 inline void get_mode() { // Get mode and store with short press indicator
   uint8_t eep;
-  for(eepos=0; eepos<64; eepos++) {
+  for(eepos = 0; eepos < 64; eepos++) {
     eep = eeprom_read_byte((const uint8_t *)(uint16_t)eepos);
     if (eep != 0xff) {
       mode_idx = eep; // Mode position in modes array
@@ -114,8 +104,11 @@ inline void get_mode() { // Get mode and store with short press indicator
       mode_idx = 0; // Wrap around
   }
   mypwm = pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
-  if (spress || (mypwm != MORSE_CODE)) {
-    store_mode_idx(mode_idx | 0x10); // Store mode with short press indicator
+  if (spress || (mypwm != MORSE_CODE)) { // Store mode with short press indicator
+    uint8_t oldpos = eepos;
+    eepos = (eepos + 1) & 63; // wear leveling, use next cell
+    eeprom_write_byte((uint8_t *)(uint16_t)(eepos), (mode_idx | 0x10)); // Store current mode
+    eeprom_write_byte((uint8_t *)(uint16_t)(oldpos), 0xff); // Erase old mode
   }
 }
 
@@ -232,11 +225,11 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
     if (!spress && mypwm == MORSE_CODE) { // Unlock Morse code
-      store_mode_idx(++mode_idx);
-    } else if (MODE_MEMORY || (mypwm == MORSE_CODE)) { // Save Mode
-      store_mode_idx(mode_idx);
+      eeprom_write_byte((uint8_t *)(uint16_t)(eepos), ++mode_idx);
+    } else if (MODE_MEMORY || (mypwm == MORSE_CODE)) { // Store current mode
+      eeprom_write_byte((uint8_t *)(uint16_t)(eepos), mode_idx);
     } else { // No mode memory
-      store_mode_idx(0);
+      eeprom_write_byte((uint8_t *)(uint16_t)(eepos), 0);
     }
   }
   if (mypwm == 255 && ticks == MODE_FULL_TIMEOUT) { // MODE_FULL timeout
