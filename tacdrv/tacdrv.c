@@ -252,6 +252,7 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
       if (low_voltage(ADC_CRIT)) {
         WDT_off(); // Disable WDT so it doesn't wake us up
         ADCSRA &= ~(1<<7); // ADC off
+        DDRB = (0 << PWM_PIN); // Set PWM pin to output
         set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
         sleep_mode();
       }
@@ -265,7 +266,7 @@ int main(void) {
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
   ADC_ctrl(); // Battery monitoring
-  WDT_on(); // Start watchdogtimer
+  //WDT_on(); // Start watchdogtimer
   get_mode(); // Get mode identifier and store with short press indicator
   if (mypwm == MODE_STROBE) {
     mode_strobe();
