@@ -49,7 +49,7 @@
 #define ADC_LOW_OUT 20 // Output level in low battery mode (0-255)
 // Misc settings
 #define MODE_MEMORY 0 // Mode memory, 0 off and 1 on
-#define MODE_TIMEOUT 2 // Number of WTD ticks before mode is saved, each tick is 1s (1-255)
+#define MODE_TIMEOUT 2 // Number of WTD ticks before mode is saved, each tick is 1s (1-9)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define MORSE_CODE 0 // Morse code output level, existing normal mode (i.e 255), 0 off
 #define MODE_FULL_TIMEOUT 0 // Number of WTD ticks before lower output, each tick is 1s, 0 off (0-255)
@@ -77,11 +77,11 @@
 #include <avr/sleep.h>
 
 //### Globals start ###
-uint8_t eepos = 0;
-uint8_t mode_idx = 0;
-PROGMEM const uint8_t modes[] = MODES;
-const uint8_t mode_cnt = sizeof(modes);
-uint8_t mypwm = 100; // Output level
+uint8_t eepos = 0; // Mode byte position in eeprom
+uint8_t mode_idx = 0; // Mode position in modes array
+PROGMEM const uint8_t modes[] = MODES; // Modes array
+const uint8_t mode_cnt = sizeof(modes); // Mode count
+uint8_t mypwm = 100; // Mode identifier/output level
 uint8_t smode = 1; // Special mode boolean
 uint8_t spress = 0; // Short press boolean
 //### Globals end ###
@@ -112,8 +112,7 @@ inline void get_mode() { // Get mode and store with short press indicator
   }
 }
 
-inline void WDT_on() {
-  // Setup watchdog timer to only interrupt, not reset
+inline void WDT_on() { // Setup watchdog timer to only interrupt, not reset
   cli(); // Disable interrupts
   wdt_reset(); // Reset the WDT
   WDTCR |= (1<<WDCE) | (1<<WDE); // Start timed sequence
@@ -121,7 +120,7 @@ inline void WDT_on() {
   sei(); // Enable interrupts
 }
 
-inline void WDT_off() {
+inline void WDT_off() { // Stop watchdog timer
   cli(); // Disable interrupts
   wdt_reset(); // Reset the WDT
   MCUSR &= ~(1<<WDRF); // Clear Watchdog reset flag
