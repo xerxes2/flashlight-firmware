@@ -43,16 +43,16 @@
 #define SOS_OUT 255 // SOS output level (0-255)
 // Battery monitoring
 #define BATT_MON 1 // Enable battery monitoring, 0 off and 1 on
-#define BATT_TIMEOUT 20 // Number of WTD ticks between checks, each tick is 1s (10-200)
+#define BATT_TIMEOUT 30 // Number of seconds between checks (10-200)
 #define ADC_LOW 130 // When do we start ramping
 #define ADC_CRIT 120 // When do we shut the light off
 #define ADC_LOW_OUT 20 // Output level in low battery mode (0-255)
 // Misc settings
 #define MODE_MEMORY 0 // Mode memory, 0 off and 1 on
-#define MODE_TIMEOUT 2 // Number of WTD ticks before mode is saved, each tick is 1s (1-9)
+#define MODE_TIMEOUT 2 // Number of seconds before mode is saved (1-9)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define MORSE_CODE 0 // Morse code output level, existing normal mode (i.e 255), 0 off
-#define MODE_FULL_TIMEOUT 0 // Number of WTD ticks before lower output, each tick is 1s, 0 off (0-255)
+#define MODE_FULL_TIMEOUT 0 // Number of seconds before lower output, 0 off (0-255)
 #define MODE_FULL_LOW 150 // Output level (1-255)
 
 //################################
@@ -62,8 +62,8 @@
 #define F_CPU 4800000UL // CPU frequency
 #define PWM_PIN PB1 // Default PWM pin
 #define PWM_LVL OCR0B // OCR0B is the output compare register for PB1
-#define PWM_FAST 0b00100011 // fast-PWM
-#define PWM_PHASE 0b00100001 // phase corrected PWM
+#define PWM_FAST 0b00100011 // Fast-PWM
+#define PWM_PHASE 0b00100001 // Phase corrected PWM
 #define ADC_CHANNEL 0x01 // MUX 01 corresponds with PB2
 #define ADC_DIDR ADC1D // Digital input disable bit corresponding with PB2
 #define ADC_PRSCL 0x06 // clk/64
@@ -142,9 +142,9 @@ inline void ADC_ctrl(void) { // Battery monitoring
 void set_output(uint8_t pwm_lvl, uint8_t pwm_mode) {
   if (pwm_mode) {
     if (pwm_lvl > FAST_PWM_START && pwm_lvl != 255) {
-      TCCR0A = PWM_FAST; // fast-PWM
+      TCCR0A = PWM_FAST; // Fast-PWM
     } else {
-      TCCR0A = PWM_PHASE; // phase corrected PWM
+      TCCR0A = PWM_PHASE; // Phase corrected PWM
     }
   }
   PWM_LVL = pwm_lvl;
@@ -154,14 +154,14 @@ static inline void mode_strobe(void) {
   uint8_t i;
   while(1){
     set_output(0, 1);
-    for(i = 0; i < STROBE_GROUP; i++){ // strobe group
+    for(i = 0; i < STROBE_GROUP; i++){ // Strobe group
       set_output(STROBE_ON_OUT, 0);
       _delay_ms(STROBE_ON);
       set_output(STROBE_OFF_OUT, 0);
       _delay_ms(STROBE_OFF);
     }
     set_output(STROBE_PAUSE_OUT, 1);
-    _delay_ms(STROBE_PAUSE); // pause between groups
+    _delay_ms(STROBE_PAUSE); // Pause between groups
   }
 }
 
@@ -191,15 +191,15 @@ void morse_blink(uint8_t dot, uint8_t pcs, uint8_t lvl) { // Morse code
 static inline void mode_sos(void) {
   uint8_t i;
   while(1){
-    for (i = 0; i < 3; i++) { // sos group
-      if (i == 0 || i == 2) {
-        morse_blink(1, 3, SOS_OUT);
+    for (i = 0; i < 3; i++) { // SOS group
+      if (i != 1) {
+        morse_blink(1, 3, SOS_OUT); // Three short
       } else {
-        morse_blink(0, 3, SOS_OUT);
+        morse_blink(0, 3, SOS_OUT); // Three long
       }
-      _delay_ms(2*SOS_DOT); // pause between chars
+      _delay_ms(3 * SOS_DOT); // Pause between chars
     }
-    _delay_ms(SOS_PAUSE); // pause between groups
+    _delay_ms(SOS_PAUSE); // Pause between groups
   }
 }
 
