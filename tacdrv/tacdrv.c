@@ -21,7 +21,7 @@
 #define MODE_BEACON 253 // Just an id dummy number, must not be used for other modes!
 #define MODE_SOS 252 // Just an id dummy number, must not be used for other modes!
 
-// Modes, inside the brackets, as many as you want
+// Modes, inside the brackets, as many as you want (1-15)
 #define MODES {MODE_LOW, MODE_MID, MODE_FULL, MODE_STROBE}
 
 // Strobe settings
@@ -87,11 +87,11 @@ uint8_t spress = 0; // Short press boolean
 //### Globals end ###
 
 inline void get_mode() { // Get mode and store with short press indicator
-  uint8_t eep;
-  for(eepos = 0; eepos < 64; eepos++) {
-    eep = eeprom_read_byte((const uint8_t *)(uint16_t)eepos);
-    if (eep != 0xff) {
-      mode_idx = eep; // Mode position in modes array
+  uint8_t oldpos;
+  for(oldpos = 0; oldpos < 64; oldpos++) {
+    mode_idx = eeprom_read_byte((const uint8_t *)(uint16_t)oldpos);
+    if (mode_idx != 0xff) {
+      eepos = oldpos;
       break;
     }
   }
@@ -105,8 +105,7 @@ inline void get_mode() { // Get mode and store with short press indicator
   }
   mypwm = pgm_read_byte(&modes[mode_idx]); // Get mode identifier/output level
   if (spress || (mypwm != MORSE_CODE)) { // Store mode with short press indicator
-    uint8_t oldpos = eepos;
-    eepos = (eepos + 1) & 63; // wear leveling, use next cell
+    eepos = (oldpos + 1) & 63; // Wear leveling, use next cell
     eeprom_write_byte((uint8_t *)(uint16_t)(eepos), (mode_idx | 0x10)); // Store current mode
     eeprom_write_byte((uint8_t *)(uint16_t)(oldpos), 0xff); // Erase old mode
   }
