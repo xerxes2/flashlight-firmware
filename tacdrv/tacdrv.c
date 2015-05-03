@@ -62,8 +62,8 @@
 #define F_CPU 4800000UL // CPU frequency
 #define PWM_PIN PB1 // Default PWM pin
 #define PWM_LVL OCR0B // OCR0B is the output compare register for PB1
-#define PWM_FAST 0b00100011 // Fast-PWM
-#define PWM_PHASE 0b00100001 // Phase corrected PWM
+#define PWM_FAST 0x23 // Fast-PWM
+#define PWM_PHASE 0x21 // Phase corrected PWM
 #define ADC_CHANNEL 0x01 // MUX 01 corresponds with PB2
 #define ADC_DIDR ADC1D // Digital input disable bit corresponding with PB2
 #define ADC_PRSCL 0x06 // clk/64
