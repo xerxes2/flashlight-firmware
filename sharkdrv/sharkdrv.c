@@ -59,6 +59,7 @@
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define PROGRAM_PAUSE 1500 // Pause between blinks (ms)
 #define PROGRAM_OUT 100 // Output level (1-255)
+#define PROGRAM_BLINKS 8 // Number of blinks when entering program mode
 #define MODE100_TIMEOUT 0 // Number of seconds before lower output, 0 off (0-255)
 #define MODE100_LOW 150 // Output level (1-255)
 #define BLINK_DELAY 200 // Pause between SOS groups (ms)
@@ -211,7 +212,7 @@ void group_blink(uint8_t pcs, uint8_t lvl) {
 
 static inline void mode_program(void) {
   uint8_t i;
-  group_blink(8, PROGRAM_OUT);
+  group_blink(PROGRAM_BLINKS, PROGRAM_OUT);
   for (i = 0; i < MODES_COUNT; i++) {
     set_output(0, 1);
     _delay_ms(PROGRAM_PAUSE);
@@ -288,7 +289,6 @@ int main(void) {
   }
   while(1) {
     sleep_mode(); // Enter sleep mode
-    
   }
   return 0;
 }
