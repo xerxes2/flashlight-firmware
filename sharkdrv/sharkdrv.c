@@ -62,8 +62,8 @@
 #define PROGRAM_PAUSE 1500 // Pause between blinks (ms)
 #define PROGRAM_OUT 100 // Output level (1-255)
 #define PROGRAM_BLINKS 8 // Number of blinks when entering program mode
+#define BLINK_DELAY 200 // Pause between program blinks (ms)
 #define MODE100_LOW MODE050 // Output level (1-255)
-#define BLINK_DELAY 200 // Pause between SOS groups (ms)
 
 //################################
 //  End user tweaking
