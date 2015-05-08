@@ -16,8 +16,9 @@
 #define MODE003 8
 #define MODE004 10
 #define MODE005 13
+#define MODE007 18
 #define MODE010 26
-#define MODE015 28
+#define MODE015 38
 #define MODE020 51
 #define MODE025 64
 #define MODE030 77
@@ -31,23 +32,24 @@
 #define MODE100 255
 // Identifiers for special modes
 #define MODE_PROGRAM 254 // Just an id dummy number, must not be used for other modes!
-#define MODE_BEACON 253 // Just an id dummy number, must not be used for other modes!
+#define MODE_STROBE 253 // Just an id dummy number, must not be used for other modes!
 
-// Mode arrays
-#define MODES00 {MODE100}
-#define MODES01 {MODE050, MODE100}
-#define MODES02 {MODE010, MODE050, MODE100}
-#define MODES03 {MODE100, MODE050}
-#define MODES04 {MODE100, MODE050, MODE010}
-// Mode arrays settings
-#define MODES_COUNT 9 // Number of available groups
-#define MODE_MEMORY {0, 0, 0, 0, 0, 1, 1, 1, 1} // Set mode memory for groups, 0 off and 1 on
+// Mode groups
+#define GROUP00 {MODE100}
+#define GROUP01 {MODE050, MODE100}
+#define GROUP02 {MODE010, MODE050, MODE100}
+#define GROUP03 {MODE010, MODE050, MODE100, MODE_STROBE}
+#define GROUP04 {MODE100, MODE050}
+#define GROUP05 {MODE100, MODE050, MODE010}
+// Mode group settings
+#define GROUP_COUNT 11 // Number of available groups
+#define MODE_MEMORY {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1} // Set mode memory for groups, 0 off and 1 on
 
-// Beacon settings
-#define BEACON_ON 1000  // Beacon on time (ms)
-#define BEACON_OFF 3000 // Beacon off time (ms)
-#define BEACON_ON_OUT 255 // Beacon output level (0-255)
-#define BEACON_OFF_OUT 0 // Beacon output level (0-255)
+// Strobe settings
+#define STROBE_ON 40  // Strobe on time (ms)
+#define STROBE_OFF 40 // Strobe off time (ms)
+#define STROBE_ON_OUT 255 // Strobe output level (0-255)
+#define STROBE_OFF_OUT 0 // Strobe output level (0-255)
 // Battery monitoring
 #define BATT_MON 1 // Enable battery monitoring, 0 off and 1 on
 #define BATT_TIMEOUT 30 // Number of seconds between checks (10-200)
@@ -60,8 +62,7 @@
 #define PROGRAM_PAUSE 1500 // Pause between blinks (ms)
 #define PROGRAM_OUT 100 // Output level (1-255)
 #define PROGRAM_BLINKS 8 // Number of blinks when entering program mode
-#define MODE100_TIMEOUT 0 // Number of seconds before lower output, 0 off (0-255)
-#define MODE100_LOW 150 // Output level (1-255)
+#define MODE100_LOW MODE050 // Output level (1-255)
 #define BLINK_DELAY 200 // Pause between SOS groups (ms)
 
 //################################
@@ -90,6 +91,7 @@ uint8_t mode_idx = 0; // Mode position in modes array
 uint8_t mode_memory; // Mode memory
 uint8_t mypwm = 100; // Mode identifier/output level
 uint8_t spress_cnt = 0; // Short press counter
+uint8_t ftimer; // Full mode timer
 //### Globals end ###
 
 void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
@@ -107,8 +109,9 @@ void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
 inline void get_mode() { // Get mode and store with short press indicator
   uint8_t modesarr;
   uint8_t oldpos;
-  modesarr = eeprom_read_byte((const uint8_t *)(uint16_t)0); // Number of modes array
-  for (oldpos = 1; oldpos < 64; oldpos++) {
+  modesarr = eeprom_read_byte((const uint8_t *)(uint16_t)0); // Number of group array
+  ftimer = eeprom_read_byte((const uint8_t *)(uint16_t)1); // Number of timer seconds
+  for (oldpos = 2; oldpos < 64; oldpos++) {
     mode_idx = eeprom_read_byte((const uint8_t *)(uint16_t)oldpos);
     if (mode_idx != 0xff) {
       break;
@@ -117,10 +120,10 @@ inline void get_mode() { // Get mode and store with short press indicator
   eepos = oldpos + 1; // Wear leveling, use next cell
   uint8_t spos = eepos + 1;
   if (eepos > 63) {
-    eepos = 1;
-    spos = 2;
+    eepos = 2;
+    spos = 3;
   } else if (eepos == 63) {
-    spos = 1;
+    spos = 2;
   }
   if (mode_idx & 0x10) { // Indicates we did a short press last time
     mode_idx &= 0x0f; // Remove short press indicator
@@ -132,20 +135,23 @@ inline void get_mode() { // Get mode and store with short press indicator
   }
   const uint8_t memarray[] = MODE_MEMORY;
   mode_memory = memarray[modesarr];
-  if (modesarr == 1 || modesarr == 5) {
-      const uint8_t modes[] = MODES01;
+  if (modesarr == 1 || modesarr == 6) {
+      const uint8_t modes[] = GROUP01;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 2 || modesarr == 6) {
-      const uint8_t modes[] = MODES02;
+  } else if (modesarr == 2 || modesarr == 7) {
+      const uint8_t modes[] = GROUP02;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 3 || modesarr == 7) {
-      const uint8_t modes[] = MODES03;
+  } else if (modesarr == 3 || modesarr == 8) {
+      const uint8_t modes[] = GROUP03;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 4 || modesarr == 8) {
-      const uint8_t modes[] = MODES04;
+  } else if (modesarr == 4 || modesarr == 9) {
+      const uint8_t modes[] = GROUP04;
+      get_mypwm(modes, sizeof(modes));
+  } else if (modesarr == 5 || modesarr == 10) {
+      const uint8_t modes[] = GROUP05;
       get_mypwm(modes, sizeof(modes));
   } else {
-      const uint8_t modes[] = MODES00;
+      const uint8_t modes[] = GROUP00;
       get_mypwm(modes, sizeof(modes));
   }
   eeprom_write_byte((uint8_t *)(uint16_t)(eepos), (mode_idx | 0x10)); // Store current mode
@@ -191,56 +197,42 @@ void set_output(uint8_t pwm_lvl, uint8_t pwm_mode) {
   PWM_LVL = pwm_lvl;
 }
 
-static inline void mode_beacon(void) {
+static inline void mode_strobe(void) {
+  set_output(0, 1);
   while(1){
-    set_output(BEACON_ON_OUT, 1);
-    _delay_ms(BEACON_ON);
-    set_output(BEACON_OFF_OUT, 1);
-    _delay_ms(BEACON_OFF);
-  }
-}
-
-void group_blink(uint8_t pcs, uint8_t lvl) {
-  uint8_t i;
-  for (i = 0; i < pcs; i++) {
-    set_output(lvl, 1);
-    _delay_ms(BLINK_DELAY);
-    set_output(0, 1);
-    _delay_ms(BLINK_DELAY);
+    set_output(STROBE_ON_OUT, 0);
+    _delay_ms(STROBE_ON);
+    set_output(STROBE_OFF_OUT, 0);
+    _delay_ms(STROBE_OFF);
   }
 }
 
 static inline void mode_program(void) {
   uint8_t i;
-  group_blink(PROGRAM_BLINKS, PROGRAM_OUT);
-  for (i = 0; i < MODES_COUNT; i++) {
-    set_output(0, 1);
-    _delay_ms(PROGRAM_PAUSE);
-    set_output(PROGRAM_OUT, 1);
-    eeprom_write_byte((uint8_t *)(uint16_t)(0), i); // Store modes array number
-    _delay_ms(PROGRAM_PAUSE);
-  }
-}
-
-uint8_t low_voltage(uint8_t voltage_val) {
-  static uint8_t lowbatt_cnt = 0;
-  ADCSRA |= (1 << ADSC); // Start conversion
-  while (ADCSRA & (1 << ADSC)); // Wait for completion
-  if (ADCH < voltage_val) { // See if voltage is lower than what we were looking for
-    if (++lowbatt_cnt > 10) { // See if it's been low for a while
-      lowbatt_cnt = 0;
-      return 1;
+  uint8_t j;
+  uint8_t k = GROUP_COUNT;
+  for (j = 0; j < 2; j++) {
+    for (i = 0; i < PROGRAM_BLINKS; i++) {
+      set_output(PROGRAM_OUT, 1);
+      _delay_ms(BLINK_DELAY);
+      set_output(0, 1);
+      _delay_ms(BLINK_DELAY);
     }
-  } else {
-    lowbatt_cnt = 0;
+    for (i = 0; i < k; i++) {
+      set_output(0, 1);
+      _delay_ms(PROGRAM_PAUSE);
+      set_output(PROGRAM_OUT, 1);
+      eeprom_write_byte((uint8_t *)(uint16_t)(j), i);
+      _delay_ms(PROGRAM_PAUSE);
+    }
+    k = 255;
   }
-  return 0;
 }
 
 ISR(WDT_vect) { // WatchDogTimer interrupt
-  static uint8_t lowbatt_mode = 0;
+  static uint8_t lowbatt_cnt = 0;
   static uint8_t ticks = 0;
-  if (ticks < 255) ticks++;
+  if (ticks < 254) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
     if (mode_memory) { // Store current mode
       eeprom_write_byte((uint8_t *)(uint16_t)(eepos), mode_idx);
@@ -248,28 +240,20 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
       eeprom_write_byte((uint8_t *)(uint16_t)(eepos), 0);
     }
   }
-  if (mypwm == 255 && ticks == MODE100_TIMEOUT) { // MODE100 timeout
+  if (mypwm == 255 && ticks == ftimer) { // MODE100 timeout
     mypwm = MODE100_LOW;
     set_output(mypwm, 1);
   }
-  if (BATT_MON && ticks == 255) {
-    ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
-    if (!lowbatt_mode) {
-      if (low_voltage(ADC_LOW)) {
-        lowbatt_mode = 1;
-        if (mypwm > ADC_LOW_OUT) {
-            mypwm = ADC_LOW_OUT; // Lower output if not in special mode
-        }
-        set_output(mypwm, 1);
-      }
-    } else {
-      if (low_voltage(ADC_CRIT)) {
-        WDT_off(); // Disable WDT so it doesn't wake us up
-        ADCSRA &= ~(1<<7); // ADC off
-        DDRB = (0 << PWM_PIN); // Set PWM pin to input
-        set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
-        sleep_mode();
-      }
+  if (BATT_MON && ticks == 254) {
+    ticks = 254 - BATT_TIMEOUT; // Battery monitoring interval
+    ADCSRA |= (1 << ADSC); // Start conversion
+    while (ADCSRA & (1 << ADSC)); // Wait for completion
+    if (ADCH < ADC_CRIT && (++lowbatt_cnt > 10)) { // See if voltage is lower than what we were looking for
+      WDT_off(); // Disable WDT so it doesn't wake us up
+      ADCSRA &= ~(1<<7); // ADC off
+      DDRB = (0 << PWM_PIN); // Set PWM pin to input
+      set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
+      sleep_mode();
     }
   }
 }
@@ -284,6 +268,8 @@ int main(void) {
   get_mode(); // Get mode identifier and store with short press indicator
   if (mypwm == MODE_PROGRAM) {
     mode_program();
+  } else if (mypwm == MODE_STROBE) {
+    mode_strobe();
   } else {
     set_output(mypwm, 1);
   }
