@@ -78,7 +78,7 @@
 #define ADC_PRSCL 0x06 // clk/64
 
 #include <avr/io.h>
-#include <util/delay.h>
+#include <util/delay_basic.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 #include <avr/eeprom.h>
@@ -92,6 +92,12 @@ uint8_t mypwm = 100; // Mode identifier/output level
 uint8_t spress_cnt = 0; // Short press counter
 uint8_t ftimer; // Full mode timer
 //### Globals end ###
+
+static void _delay_ms(uint16_t n) { // Use own delay function
+  while(n-- > 0) {
+    _delay_loop_2(992);
+  }
+}
 
 void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
   if (spress_cnt == 7) { // Enter program mode
