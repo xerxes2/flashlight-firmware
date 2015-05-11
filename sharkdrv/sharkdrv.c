@@ -101,7 +101,7 @@ static void _delay_ms(uint16_t n) { // Use own delay function
 }
 
 void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
-  if (spress_cnt == 7) { // Enter program mode
+  if (spress_cnt == 9) { // Enter program mode
     spress_cnt = 0;
     mypwm = 254;
   } else {
@@ -256,7 +256,7 @@ static inline void mode_program(void) {
 ISR(WDT_vect) { // WatchDogTimer interrupt
   static uint8_t lowbatt_cnt = 0;
   static uint8_t ticks = 0;
-  if (ticks < 254) ticks++;
+  if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
     if (mode_memory) { // Store current mode
       eeprom_write_byte((uint8_t *)(uint16_t)(eepos), mode_idx);
@@ -268,8 +268,8 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
     mypwm = MODE100_LOW;
     set_output(mypwm, 1);
   }
-  if (BATT_MON && ticks == 254) {
-    ticks = 254 - BATT_TIMEOUT; // Battery monitoring interval
+  if (BATT_MON && ticks == 255) {
+    ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
     ADCSRA |= (1 << ADSC); // Start conversion
     while (ADCSRA & (1 << ADSC)); // Wait for completion
     if (ADCH < ADC_CRIT && (++lowbatt_cnt > 10)) { // See if voltage is lower than what we were looking for
