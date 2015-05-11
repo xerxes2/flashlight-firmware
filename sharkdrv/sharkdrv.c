@@ -91,6 +91,7 @@ uint8_t mode_memory; // Mode memory
 uint8_t mypwm = 100; // Mode identifier/output level
 uint8_t spress_cnt = 0; // Short press counter
 uint8_t ftimer; // Full mode timer
+uint8_t strobe_delay; // Strobe frequency delay
 //### Globals end ###
 
 static void _delay_ms(uint16_t n) { // Use own delay function
@@ -116,7 +117,8 @@ inline void get_mode() { // Get mode and store with short press indicator
   uint8_t oldpos;
   modesarr = eeprom_read_byte((const uint8_t *)(uint16_t)0); // Number of group array
   ftimer = eeprom_read_byte((const uint8_t *)(uint16_t)1); // Number of timer seconds
-  for (oldpos = 2; oldpos < 64; oldpos++) {
+  strobe_delay = eeprom_read_byte((const uint8_t *)(uint16_t)1); // Strobe delay
+  for (oldpos = 3; oldpos < 64; oldpos++) {
     mode_idx = eeprom_read_byte((const uint8_t *)(uint16_t)oldpos);
     if (mode_idx != 0xff) {
       break;
@@ -125,10 +127,10 @@ inline void get_mode() { // Get mode and store with short press indicator
   eepos = oldpos + 1; // Wear leveling, use next cell
   uint8_t spos = eepos + 1;
   if (eepos > 63) {
-    eepos = 2;
-    spos = 3;
+    eepos = 3;
+    spos = 4;
   } else if (eepos == 63) {
-    spos = 2;
+    spos = 3;
   }
   if (mode_idx & 0x10) { // Indicates we did a short press last time
     mode_idx &= 0x0f; // Remove short press indicator
@@ -207,9 +209,9 @@ void strobe_blinker(uint8_t pcs) {
   uint8_t i;
   for (i = 0; i < pcs; i++) {
     set_output(STROBE_ON_OUT, 0);
-    _delay_ms(STROBE_ON);
+    _delay_ms(strobe_delay);
     set_output(STROBE_OFF_OUT, 0);
-    _delay_ms(STROBE_OFF);
+    _delay_ms(strobe_delay);
   }
 }
 
@@ -230,7 +232,7 @@ static inline void mode_program(void) {
   uint8_t i;
   uint8_t j;
   uint8_t k = GROUP_COUNT;
-  for (j = 0; j < 2; j++) {
+  for (j = 0; j < 3; j++) {
   /*
     for (i = 0; i < PROGRAM_BLINKS; i++) {
       set_output(PROGRAM_OUT, 1);
