@@ -61,8 +61,7 @@
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define PROGRAM_PAUSE 1500 // Pause between blinks (ms)
 #define PROGRAM_OUT 100 // Output level (1-255)
-#define PROGRAM_BLINKS 8 // Number of blinks when entering program mode
-#define BLINK_DELAY 200 // Pause between program blinks (ms)
+#define PROGRAM_BLINKS 40 // Number of strobe blinks when entering program mode
 #define MODE100_LOW MODE050 // Output level (1-255)
 
 //################################
@@ -197,13 +196,27 @@ void set_output(uint8_t pwm_lvl, uint8_t pwm_mode) {
   PWM_LVL = pwm_lvl;
 }
 
-static inline void mode_strobe(void) {
+void strobe_blinker(uint8_t pcs) {
   set_output(0, 1);
-  while(1){
+  uint8_t i;
+  for (i = 0; i < pcs; i++) {
     set_output(STROBE_ON_OUT, 0);
     _delay_ms(STROBE_ON);
     set_output(STROBE_OFF_OUT, 0);
     _delay_ms(STROBE_OFF);
+  }
+}
+
+static inline void mode_strobe(void) {
+  //set_output(0, 1);
+  while(1){
+  /*
+    set_output(STROBE_ON_OUT, 0);
+    _delay_ms(STROBE_ON);
+    set_output(STROBE_OFF_OUT, 0);
+    _delay_ms(STROBE_OFF);
+  */
+  strobe_blinker(255);
   }
 }
 
@@ -212,12 +225,15 @@ static inline void mode_program(void) {
   uint8_t j;
   uint8_t k = GROUP_COUNT;
   for (j = 0; j < 2; j++) {
+  /*
     for (i = 0; i < PROGRAM_BLINKS; i++) {
       set_output(PROGRAM_OUT, 1);
       _delay_ms(BLINK_DELAY);
       set_output(0, 1);
       _delay_ms(BLINK_DELAY);
     }
+    */
+    strobe_blinker(PROGRAM_BLINKS);
     for (i = 0; i < k; i++) {
       set_output(0, 1);
       _delay_ms(PROGRAM_PAUSE);
