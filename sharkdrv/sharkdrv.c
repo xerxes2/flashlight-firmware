@@ -35,15 +35,15 @@
 #define MODE_STROBE 253 // Just an id dummy number, must not be used for other modes!
 
 // Mode groups
-#define GROUP00 {MODE100}
-#define GROUP01 {MODE050, MODE100}
+#define GROUP00 {MODE_STROBE}
+#define GROUP01 {MODE007, MODE020, MODE060, MODE100}
 #define GROUP02 {MODE010, MODE050, MODE100}
 #define GROUP03 {MODE010, MODE050, MODE100, MODE_STROBE}
-#define GROUP04 {MODE100, MODE050}
-#define GROUP05 {MODE100, MODE050, MODE010}
+#define GROUP04 {MODE100, MODE050, MODE010}
+#define GROUP05 {MODE100, MODE050, MODE010, MODE_STROBE}
 // Mode group settings
 #define GROUP_COUNT 11 // Number of available groups
-#define MODE_MEMORY {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1} // Set mode memory for groups, 0 off and 1 on
+#define MODE_MEMORY {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1} // Mode memory for groups, 0 off and 1 on
 
 // Strobe settings
 #define STROBE_ON 40  // Strobe on time (ms)
@@ -59,9 +59,11 @@
 // Misc settings
 #define MODE_TIMEOUT 2 // Number of seconds before mode is saved (1-9)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
-#define PROGRAM_PAUSE 1500 // Pause between blinks (ms)
-#define PROGRAM_OUT 100 // Output level (1-255)
-#define PROGRAM_BLINKS 40 // Number of strobe blinks when entering program mode
+#define PROGRAM_SPRESS 9 // Number of short presses to enter program mode, from 0
+#define PROGRAM_PAUSE 150 // Pause between blinks (5ms)
+#define PROGRAM_OUT MODE020 // Output level (1-255)
+#define PROGRAM_BLINKS 10 // Number of strobe blinks when entering program mode
+#define PROGRAM_DELAY 40 // Delay between blinks when entering program mode (5ms)
 #define MODE100_LOW MODE050 // Output level (1-255)
 
 //################################
@@ -78,7 +80,7 @@
 #define ADC_PRSCL 0x06 // clk/64
 
 #include <avr/io.h>
-#include <util/delay_basic.h>
+#include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 #include <avr/eeprom.h>
@@ -94,14 +96,14 @@ uint8_t ftimer; // Full mode timer
 uint8_t strobe_delay; // Strobe frequency delay
 //### Globals end ###
 
-static void _delay_ms(uint16_t n) { // Use own delay function
+static void delay_5ms(uint8_t n) { // Use own delay function
   while(n-- > 0) {
-    _delay_loop_2(992);
+    _delay_ms(5);
   }
 }
 
 void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
-  if (spress_cnt == 9) { // Enter program mode
+  if (spress_cnt == PROGRAM_SPRESS) { // Enter program mode
     spress_cnt = 0;
     mypwm = 254;
   } else {
@@ -116,8 +118,8 @@ inline void get_mode() { // Get mode and store with short press indicator
   uint8_t modesarr;
   uint8_t oldpos;
   modesarr = eeprom_read_byte((const uint8_t *)(uint16_t)0); // Number of group array
-  ftimer = eeprom_read_byte((const uint8_t *)(uint16_t)1); // Number of timer seconds
-  strobe_delay = eeprom_read_byte((const uint8_t *)(uint16_t)1); // Strobe delay
+  ftimer = eeprom_read_byte((const uint8_t *)(uint16_t)1) - 1; // Number of timer seconds
+  strobe_delay = eeprom_read_byte((const uint8_t *)(uint16_t)2); // Strobe delay
   for (oldpos = 3; oldpos < 64; oldpos++) {
     mode_idx = eeprom_read_byte((const uint8_t *)(uint16_t)oldpos);
     if (mode_idx != 0xff) {
@@ -204,14 +206,14 @@ void set_output(uint8_t pwm_lvl, uint8_t pwm_mode) {
   PWM_LVL = pwm_lvl;
 }
 
-void strobe_blinker(uint8_t pcs) {
+void strobe_blinker(uint8_t pcs, uint8_t delay) {
   set_output(0, 1);
   uint8_t i;
   for (i = 0; i < pcs; i++) {
     set_output(STROBE_ON_OUT, 0);
-    _delay_ms(strobe_delay);
+    delay_5ms(delay);
     set_output(STROBE_OFF_OUT, 0);
-    _delay_ms(strobe_delay);
+    delay_5ms(delay);
   }
 }
 
@@ -224,7 +226,7 @@ static inline void mode_strobe(void) {
     set_output(STROBE_OFF_OUT, 0);
     _delay_ms(STROBE_OFF);
   */
-  strobe_blinker(255);
+    strobe_blinker(255, strobe_delay);
   }
 }
 
@@ -241,13 +243,13 @@ static inline void mode_program(void) {
       _delay_ms(BLINK_DELAY);
     }
     */
-    strobe_blinker(PROGRAM_BLINKS);
-    for (i = 0; i < k; i++) {
+    strobe_blinker(PROGRAM_BLINKS, PROGRAM_DELAY);
+    for (i = 1; i <= k; i++) {
       set_output(0, 1);
-      _delay_ms(PROGRAM_PAUSE);
+      delay_5ms(PROGRAM_PAUSE);
       set_output(PROGRAM_OUT, 1);
       eeprom_write_byte((uint8_t *)(uint16_t)(j), i);
-      _delay_ms(PROGRAM_PAUSE);
+      delay_5ms(PROGRAM_PAUSE);
     }
     k = 255;
   }
