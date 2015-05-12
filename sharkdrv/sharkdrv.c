@@ -105,7 +105,6 @@ static void delay_5ms(uint8_t n) { // Use own delay function
 
 void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
   if (spress_cnt >= PROGRAM_SPRESS && spress_cnt < PROGRAM_SPRESS + PROGRAM_MODES) { // Enter program mode
-    //spress_cnt = 0;
     mypwm = 254;
   } else {
     if (mode_idx >= mode_cnt) {
@@ -207,53 +206,31 @@ void set_output(uint8_t pwm_lvl, uint8_t pwm_mode) {
   PWM_LVL = pwm_lvl;
 }
 
-void strobe_blinker(uint8_t pcs, uint8_t delay) {
-  set_output(0, 1);
-  uint8_t i;
-  for (i = 0; i < pcs; i++) {
-    set_output(STROBE_ON_OUT, 0);
-    delay_5ms(delay);
-    set_output(STROBE_OFF_OUT, 0);
-    delay_5ms(delay);
-  }
-}
-
 static inline void mode_strobe(void) {
-  //set_output(0, 1);
-  while(1){
-  /*
+  while(1) {
     set_output(STROBE_ON_OUT, 0);
-    _delay_ms(STROBE_ON);
+    delay_5ms(strobe_delay);
     set_output(STROBE_OFF_OUT, 0);
-    _delay_ms(STROBE_OFF);
-  */
-    strobe_blinker(255, strobe_delay);
+    delay_5ms(strobe_delay);
   }
 }
 
 static inline void mode_program(void) {
   uint8_t i;
   uint8_t j = spress_cnt - PROGRAM_SPRESS;
-  //uint8_t k = 255;
-  //for (j = 0; j < 3; j++) {
-  /*
-    for (i = 0; i < PROGRAM_BLINKS; i++) {
-      set_output(PROGRAM_OUT, 1);
-      _delay_ms(BLINK_DELAY);
-      set_output(0, 1);
-      _delay_ms(BLINK_DELAY);
-    }
-    */
-    strobe_blinker(PROGRAM_BLINKS, PROGRAM_DELAY);
-    for (i = 1; i <= 255; i++) {
-      set_output(0, 1);
-      delay_5ms(PROGRAM_PAUSE);
-      set_output(PROGRAM_OUT, 1);
-      eeprom_write_byte((uint8_t *)(uint16_t)(j), i);
-      delay_5ms(PROGRAM_PAUSE);
-    }
-    //k = 255;
-  //}
+  for (i = 0; i < PROGRAM_BLINKS; i++) {
+    set_output(PROGRAM_OUT, 0);
+    delay_5ms(PROGRAM_DELAY);
+    set_output(0, 0);
+    delay_5ms(PROGRAM_DELAY);
+  }
+  for (i = 1; i <= 255; i++) {
+    set_output(0, 1);
+    delay_5ms(PROGRAM_PAUSE);
+    set_output(PROGRAM_OUT, 1);
+    eeprom_write_byte((uint8_t *)(uint16_t)(j), i);
+    delay_5ms(PROGRAM_PAUSE);
+  }
 }
 
 ISR(WDT_vect) { // WatchDogTimer interrupt
@@ -290,6 +267,7 @@ int main(void) {
   ACSR |= (1<<7); // AC (Analog Comparator) off
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
+  set_output(0, 1); // Set phase pwm as default
   ADC_ctrl(); // Battery monitoring
   WDT_on(); // Start watchdogtimer
   get_mode(); // Get mode identifier and store with short press indicator
