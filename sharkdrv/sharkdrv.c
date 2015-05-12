@@ -35,7 +35,7 @@
 #define MODE_STROBE 253 // Just an id dummy number, must not be used for other modes!
 
 // Mode groups
-#define GROUP00 {MODE_STROBE}
+#define GROUP00 {MODE100}
 #define GROUP01 {MODE007, MODE020, MODE060, MODE100}
 #define GROUP02 {MODE010, MODE050, MODE100}
 #define GROUP03 {MODE010, MODE050, MODE100, MODE_STROBE}
@@ -60,9 +60,10 @@
 #define MODE_TIMEOUT 2 // Number of seconds before mode is saved (1-9)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define PROGRAM_SPRESS 9 // Number of short presses to enter program mode, from 0
+#define PROGRAM_MODES 3 // Number of program modes
 #define PROGRAM_PAUSE 150 // Pause between blinks (5ms)
 #define PROGRAM_OUT MODE020 // Output level (1-255)
-#define PROGRAM_BLINKS 10 // Number of strobe blinks when entering program mode
+#define PROGRAM_BLINKS 20 // Number of strobe blinks when entering program mode
 #define PROGRAM_DELAY 40 // Delay between blinks when entering program mode (5ms)
 #define MODE100_LOW MODE050 // Output level (1-255)
 
@@ -103,8 +104,8 @@ static void delay_5ms(uint8_t n) { // Use own delay function
 }
 
 void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
-  if (spress_cnt == PROGRAM_SPRESS) { // Enter program mode
-    spress_cnt = 0;
+  if (spress_cnt >= PROGRAM_SPRESS && spress_cnt < PROGRAM_SPRESS + PROGRAM_MODES) { // Enter program mode
+    //spress_cnt = 0;
     mypwm = 254;
   } else {
     if (mode_idx >= mode_cnt) {
@@ -144,19 +145,19 @@ inline void get_mode() { // Get mode and store with short press indicator
   }
   const uint8_t memarray[] = MODE_MEMORY;
   mode_memory = memarray[modesarr];
-  if (modesarr == 1 || modesarr == 6) {
+  if (modesarr == 2 || modesarr == 7) {
       const uint8_t modes[] = GROUP01;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 2 || modesarr == 7) {
+  } else if (modesarr == 3 || modesarr == 8) {
       const uint8_t modes[] = GROUP02;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 3 || modesarr == 8) {
+  } else if (modesarr == 4 || modesarr == 9) {
       const uint8_t modes[] = GROUP03;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 4 || modesarr == 9) {
+  } else if (modesarr == 5 || modesarr == 10) {
       const uint8_t modes[] = GROUP04;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 5 || modesarr == 10) {
+  } else if (modesarr == 6 || modesarr == 11) {
       const uint8_t modes[] = GROUP05;
       get_mypwm(modes, sizeof(modes));
   } else {
@@ -232,9 +233,9 @@ static inline void mode_strobe(void) {
 
 static inline void mode_program(void) {
   uint8_t i;
-  uint8_t j;
-  uint8_t k = GROUP_COUNT;
-  for (j = 0; j < 3; j++) {
+  uint8_t j = spress_cnt - PROGRAM_SPRESS;
+  //uint8_t k = 255;
+  //for (j = 0; j < 3; j++) {
   /*
     for (i = 0; i < PROGRAM_BLINKS; i++) {
       set_output(PROGRAM_OUT, 1);
@@ -244,15 +245,15 @@ static inline void mode_program(void) {
     }
     */
     strobe_blinker(PROGRAM_BLINKS, PROGRAM_DELAY);
-    for (i = 1; i <= k; i++) {
+    for (i = 1; i <= 255; i++) {
       set_output(0, 1);
       delay_5ms(PROGRAM_PAUSE);
       set_output(PROGRAM_OUT, 1);
       eeprom_write_byte((uint8_t *)(uint16_t)(j), i);
       delay_5ms(PROGRAM_PAUSE);
     }
-    k = 255;
-  }
+    //k = 255;
+  //}
 }
 
 ISR(WDT_vect) { // WatchDogTimer interrupt
