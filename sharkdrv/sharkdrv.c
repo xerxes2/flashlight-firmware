@@ -225,9 +225,9 @@ static inline void mode_program(void) {
     delay_5ms(PROGRAM_DELAY);
   }
   for (i = 1; i <= 255; i++) {
-    set_output(0, 1);
+    set_output(0, 0);
     delay_5ms(PROGRAM_PAUSE);
-    set_output(PROGRAM_OUT, 1);
+    set_output(PROGRAM_OUT, 0);
     eeprom_write_byte((uint8_t *)(uint16_t)(j), i);
     delay_5ms(PROGRAM_PAUSE);
   }
