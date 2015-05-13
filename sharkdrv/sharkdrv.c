@@ -35,7 +35,7 @@
 #define MODE_STROBE 253 // Just an id dummy number, must not be used for other modes!
 
 // Mode groups
-#define GROUP00 {MODE100}
+#define GROUP00 {MODE_RAMPING}
 #define GROUP01 {MODE007, MODE020, MODE060, MODE100}
 #define GROUP02 {MODE010, MODE050, MODE100}
 #define GROUP03 {MODE010, MODE050, MODE100, MODE_STROBE}
@@ -60,7 +60,7 @@
 #define MODE_TIMEOUT 2 // Number of seconds before mode is saved (1-9)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define PROGRAM_SPRESS 9 // Number of short presses to enter program mode, from 0
-#define PROGRAM_MODES 3 // Number of program modes
+#define PROGRAM_MODES 4 // Number of program modes
 #define PROGRAM_PAUSE 150 // Pause between blinks (5ms)
 #define PROGRAM_OUT MODE020 // Output level (1-255)
 #define PROGRAM_BLINKS 20 // Number of strobe blinks when entering program mode
@@ -104,8 +104,8 @@ static void delay_5ms(uint8_t n) { // Use own delay function
 }
 
 void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
-  if (spress_cnt >= PROGRAM_SPRESS && spress_cnt < PROGRAM_SPRESS + PROGRAM_MODES) { // Enter program mode
-    mypwm = 254;
+  if (spress_cnt >= PROGRAM_SPRESS && spress_cnt < PROGRAM_SPRESS + PROGRAM_MODES) {
+    mypwm = 254; // Enter program mode
   } else {
     if (mode_idx >= mode_cnt) {
       mode_idx = 0; // Wrap around
@@ -116,11 +116,16 @@ void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
 
 inline void get_mode() { // Get mode and store with short press indicator
   uint8_t modesarr;
+  uint8_t MODE_RAMPING;
   uint8_t oldpos;
   modesarr = eeprom_read_byte((const uint8_t *)(uint16_t)0); // Number of group array
   ftimer = eeprom_read_byte((const uint8_t *)(uint16_t)1) - 1; // Number of timer seconds
   strobe_delay = eeprom_read_byte((const uint8_t *)(uint16_t)2); // Strobe delay
-  for (oldpos = 3; oldpos < 64; oldpos++) {
+  MODE_RAMPING = eeprom_read_byte((const uint8_t *)(uint16_t)3); // Ramping output level
+  if (MODE_RAMPING > 250) {
+    MODE_RAMPING = 255;
+  }
+  for (oldpos = 4; oldpos < 64; oldpos++) {
     mode_idx = eeprom_read_byte((const uint8_t *)(uint16_t)oldpos);
     if (mode_idx != 0xff) {
       break;
@@ -129,10 +134,10 @@ inline void get_mode() { // Get mode and store with short press indicator
   eepos = oldpos + 1; // Wear leveling, use next cell
   uint8_t spos = eepos + 1;
   if (eepos > 63) {
-    eepos = 3;
-    spos = 4;
+    eepos = 4;
+    spos = 5;
   } else if (eepos == 63) {
-    spos = 3;
+    spos = 4;
   }
   if (mode_idx & 0x10) { // Indicates we did a short press last time
     mode_idx &= 0x0f; // Remove short press indicator
