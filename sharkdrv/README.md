@@ -5,7 +5,7 @@ License: Released to the Public Domain.
 
 For use in 105d type drivers, no support for stars.
 
-1. Set group (10 short presses)
+1. Group (10 short presses)
 
  To set group you make 10 short presses and after that you will get a few seconds short flashes.
 After that you count all long flashes and switch off when you reach your group.
