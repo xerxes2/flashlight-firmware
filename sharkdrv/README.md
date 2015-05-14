@@ -7,7 +7,7 @@ For use in 105d type drivers, no support for stars.
 
 1. Set group (10 short presses)
 
- To choose group you make 10 short presses and after that you will get a few seconds short flashes.
+ To set group you make 10 short presses and after that you will get a few seconds short flashes.
 After that you count all long flashes and switch off when you reach your group.
 
  1. Ramping (default 100)
