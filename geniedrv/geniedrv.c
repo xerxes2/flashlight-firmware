@@ -13,6 +13,7 @@
 // Identifiers for special modes
 #define MODE_PROGRAM 254 // Just an id dummy number, must not be used for other modes!
 #define MODE_STROBE 1 // Just an id dummy number, must not be used for other modes!
+#define MODE_SOS 2 // Just an id dummy number, must not be used for other modes!
 
 // Strobe settings
 #define STROBE_ON 40  // Strobe on time (ms)
@@ -21,7 +22,7 @@
 #define STROBE_OFF_OUT 0 // Strobe output level (0-255)
 // SOS settings
 #define SOS_PAUSE 255 // Pause between SOS groups (5ms)
-#define SOS_DOT 40 // Morse code dot duration (5ms)
+#define SOS_DOT 50 // Morse code dot duration (5ms)
 #define SOS_OUT 255 // SOS output level (0-255)
 // Battery monitoring
 #define BATT_MON 1 // Enable battery monitoring, 0 off and 1 on
@@ -178,13 +179,13 @@ static inline void mode_strobe(void) {
 void morse_blink(uint8_t dot, uint8_t pcs, uint8_t lvl) { // Morse code
   uint8_t i;
   for (i = 0; i < pcs; i++) {
-    set_output(lvl, 1);
+    set_output(lvl, 0);
     if (dot) {
       delay_5ms(SOS_DOT);
     } else {
       delay_5ms(3 * SOS_DOT);
     }
-    set_output(0, 1);
+    set_output(0, 0);
     delay_5ms(SOS_DOT);
   }
 }
@@ -290,7 +291,10 @@ int main(void) {
     mode_program();
   } else if (mypwm == MODE_STROBE) {
     mode_strobe();
+  } else if (mypwm == MODE_SOS) {
+    mode_sos();
   } else {
+    smode = 0; // Special mode boolean
     set_output(mypwm, 1);
   }
   while(1) {
