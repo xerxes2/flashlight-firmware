@@ -19,6 +19,10 @@
 #define STROBE_OFF 40 // Strobe off time (ms)
 #define STROBE_ON_OUT 255 // Strobe output level (0-255)
 #define STROBE_OFF_OUT 0 // Strobe output level (0-255)
+// SOS settings
+#define SOS_PAUSE 255 // Pause between SOS groups (5ms)
+#define SOS_DOT 40 // Morse code dot duration (5ms)
+#define SOS_OUT 255 // SOS output level (0-255)
 // Battery monitoring
 #define BATT_MON 1 // Enable battery monitoring, 0 off and 1 on
 #define BATT_TIMEOUT 30 // Number of seconds between checks (10-200)
@@ -64,6 +68,7 @@ uint8_t mypwm = 100; // Mode identifier/output level
 uint8_t ftimer; // Full mode timer
 uint8_t spress_cnt = 0; // Short press counter
 uint8_t strobe_delay; // Strobe frequency delay
+uint8_t smode = 1; // Special mode boolean
 //### Globals end ###
 
 static void delay_5ms(uint8_t n) { // Use own delay function
@@ -170,6 +175,35 @@ static inline void mode_strobe(void) {
   }
 }
 
+void morse_blink(uint8_t dot, uint8_t pcs, uint8_t lvl) { // Morse code
+  uint8_t i;
+  for (i = 0; i < pcs; i++) {
+    set_output(lvl, 1);
+    if (dot) {
+      delay_5ms(SOS_DOT);
+    } else {
+      delay_5ms(3 * SOS_DOT);
+    }
+    set_output(0, 1);
+    delay_5ms(SOS_DOT);
+  }
+}
+
+static inline void mode_sos(void) {
+  uint8_t i;
+  while(1){
+    for (i = 0; i < 3; i++) { // SOS group
+      if (i != 1) {
+        morse_blink(1, 3, SOS_OUT); // Three short
+      } else {
+        morse_blink(0, 3, SOS_OUT); // Three long
+      }
+     delay_5ms(3 * SOS_DOT); // Pause between chars
+    }
+    delay_5ms(SOS_PAUSE); // Pause between groups
+  }
+}
+
 static inline void mode_program(void) {
   uint8_t i;
   uint8_t j = spress_cnt - PROGRAM_SPRESS;
@@ -188,8 +222,23 @@ static inline void mode_program(void) {
   }
 }
 
-ISR(WDT_vect) { // WatchDogTimer interrupt
+uint8_t low_voltage(uint8_t voltage_val) {
   static uint8_t lowbatt_cnt = 0;
+  ADCSRA |= (1 << ADSC); // Start conversion
+  while (ADCSRA & (1 << ADSC)); // Wait for completion
+  if (ADCH < voltage_val) { // See if voltage is lower than what we were looking for
+    if (++lowbatt_cnt > 10) { // See if it's been low for a while
+      lowbatt_cnt = 0;
+      return 1;
+    }
+  } else {
+    lowbatt_cnt = 0;
+  }
+  return 0;
+}
+
+ISR(WDT_vect) { // WatchDogTimer interrupt
+  static uint8_t lowbatt_mode = 0;
   static uint8_t ticks = 0;
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
@@ -205,14 +254,25 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
   }
   if (BATT_MON && ticks == 255) {
     ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
-    ADCSRA |= (1 << ADSC); // Start conversion
-    while (ADCSRA & (1 << ADSC)); // Wait for completion
-    if (ADCH < ADC_CRIT && (++lowbatt_cnt > 10)) { // See if voltage is lower than what we were looking for
-      WDT_off(); // Disable WDT so it doesn't wake us up
-      ADCSRA &= ~(1<<7); // ADC off
-      DDRB = (0 << PWM_PIN); // Set PWM pin to input
-      set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
-      sleep_mode();
+    if (!lowbatt_mode) {
+      if (low_voltage(ADC_LOW)) {
+        lowbatt_mode = 1;
+        if (!smode) {
+          if (mypwm > ADC_LOW_OUT) {
+            mypwm = ADC_LOW_OUT; // Lower output if not in special mode
+          }
+          morse_blink(1, 5, mypwm); // Flash a few times
+          set_output(mypwm, 1);
+        }
+      }
+    } else {
+      if (low_voltage(ADC_CRIT)) {
+        WDT_off(); // Disable WDT so it doesn't wake us up
+        ADCSRA &= ~(1<<7); // ADC off
+        DDRB = (0 << PWM_PIN); // Set PWM pin to input
+        set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
+        sleep_mode();
+      }
     }
   }
 }
