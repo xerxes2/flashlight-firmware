@@ -22,8 +22,8 @@
 #define STROBE_OFF_OUT 0 // Strobe output level (0-255)
 // SOS settings
 #define SOS_PAUSE 255 // Pause between SOS groups (5ms)
-#define SOS_DOT 50 // Morse code dot duration (5ms)
-#define SOS_OUT 255 // SOS output level (0-255)
+#define SOS_DOT 45 // Morse code dot duration (5ms)
+#define SOS_OUT 255 // SOS output level (1-255)
 // Battery monitoring
 #define BATT_MON 1 // Enable battery monitoring, 0 off and 1 on
 #define BATT_TIMEOUT 30 // Number of seconds between checks (10-200)
@@ -208,12 +208,15 @@ static inline void mode_sos(void) {
 static inline void mode_program(void) {
   uint8_t i;
   uint8_t j = spress_cnt - PROGRAM_SPRESS;
+  /*
   for (i = 0; i < PROGRAM_BLINKS; i++) {
     set_output(PROGRAM_OUT, 0);
     delay_5ms(PROGRAM_DELAY);
     set_output(0, 0);
     delay_5ms(PROGRAM_DELAY);
   }
+  */
+  morse_blink(1, PROGRAM_BLINKS, PROGRAM_OUT);
   for (i = 1; i <= 255; i++) {
     set_output(0, 0);
     delay_5ms(PROGRAM_PAUSE);
