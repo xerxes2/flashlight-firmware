@@ -5,6 +5,8 @@ License: Released to the Public Domain.
 
 For use in 105d type drivers, no support for stars.
 
+Programming
+
 1. Mode memory (10 short presses)
 
  To set memory you make 10 short presses and after that you will get a few seconds short flashes.
@@ -32,4 +34,9 @@ All long flashes after that mean one mode each. Max is 6.
  To set a mode you make 14-19 short presses and after that you will get a few seconds short flashes.
 The first long flash after that means strobe and the second means SOS. All other flashes mean one step
 normal light output (3-255).
+
+Battery check (30 short presses)
+
+ To check battery condition you make 30 short presses and after that you will get a few seconds short flashes.
+After that you will get a few long flashes (1-5). The more the better condition.
 
