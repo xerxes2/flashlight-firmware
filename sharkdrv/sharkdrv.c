@@ -64,7 +64,7 @@
 #define PROGRAM_PAUSE 150 // Pause between blinks (5ms)
 #define PROGRAM_OUT MODE020 // Output level (1-255)
 #define PROGRAM_BLINKS 20 // Number of strobe blinks when entering program mode
-#define PROGRAM_DELAY 40 // Delay between blinks when entering program mode (5ms)
+#define PROGRAM_DELAY 45 // Delay between blinks when entering program mode (5ms)
 #define MODE100_LOW MODE050 // Output level (1-255)
 
 //################################
@@ -125,7 +125,7 @@ inline void get_mode() { // Get mode and store with short press indicator
   if (MODE_RAMPING > 250) {
     MODE_RAMPING = 255;
   }
-  for (oldpos = 4; oldpos < 64; oldpos++) {
+  for (oldpos = 4; oldpos < 63; oldpos++) {
     mode_idx = eeprom_read_byte((const uint8_t *)(uint16_t)oldpos);
     if (mode_idx != 0xff) {
       break;
@@ -133,16 +133,16 @@ inline void get_mode() { // Get mode and store with short press indicator
   }
   eepos = oldpos + 1; // Wear leveling, use next cell
   uint8_t spos = eepos + 1;
-  if (eepos > 63) {
+  uint8_t oldspos = eepos;
+  if (eepos > 62) {
     eepos = 4;
     spos = 5;
-  } else if (eepos == 63) {
-    spos = 4;
+    oldspos = 63;
   }
   if (mode_idx & 0x10) { // Indicates we did a short press last time
     mode_idx &= 0x0f; // Remove short press indicator
     mode_idx++; // Go to the next mode
-    spress_cnt = eeprom_read_byte((const uint8_t *)(uint16_t)eepos);
+    spress_cnt = eeprom_read_byte((const uint8_t *)(uint16_t)oldspos);
     if (spress_cnt != 0xff) {
       spress_cnt++;
     }
@@ -272,9 +272,9 @@ int main(void) {
   ACSR |= (1<<7); // AC (Analog Comparator) off
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
-  set_output(0, 1); // Set phase pwm as default
   ADC_ctrl(); // Battery monitoring
   WDT_on(); // Start watchdogtimer
+  set_output(0, 1); // Set phase pwm as default
   get_mode(); // Get mode identifier and store with short press indicator
   if (mypwm == MODE_PROGRAM) {
     mode_program();

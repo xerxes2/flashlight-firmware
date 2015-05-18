@@ -5,6 +5,8 @@ License: Released to the Public Domain.
 
 For use in 105d type drivers, no support for stars.
 
+##### Programming
+
 1. Group (10 short presses)
 
  To set group you make 10 short presses and after that you will get a few seconds short flashes.
