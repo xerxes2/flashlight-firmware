@@ -12,6 +12,7 @@
 
 // Identifiers for special modes
 #define MODE_PROGRAM 254 // Just an id dummy number, must not be used for other modes!
+#define MODE_BATT 253 // Just an id dummy number, must not be used for other modes!
 #define MODE_STROBE 1 // Just an id dummy number, must not be used for other modes!
 #define MODE_SOS 2 // Just an id dummy number, must not be used for other modes!
 
@@ -30,6 +31,13 @@
 #define ADC_LOW 130 // When do we start ramping
 #define ADC_CRIT 120 // When do we shut the light off
 #define ADC_LOW_OUT 20 // Output level in low battery mode (0-255)
+// Battery check
+#define BATT_CHECK 29 // Number of short presses, from 0
+#define ADC_100 174 // ADC value for 100% full (4.2V resting)
+#define ADC_75 166 // ADC value for 75% full (4.0V resting)
+#define ADC_50 158 // ADC value for 50% full (3.8V resting)
+#define ADC_25 145 // ADC value for 25% full (3.5V resting)
+#define ADC_0 124 // ADC value for 0% full (3.0V resting)
 // Misc settings
 #define MODE_TIMEOUT 2 // Number of seconds before mode is saved (1-9)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
@@ -69,7 +77,6 @@ uint8_t mypwm = 100; // Mode identifier/output level
 uint8_t ftimer; // Full mode timer
 uint8_t spress_cnt = 0; // Short press counter
 uint8_t strobe_delay; // Strobe frequency delay
-uint8_t smode = 1; // Special mode boolean
 //### Globals end ###
 
 static void delay_5ms(uint8_t n) { // Use own delay function
@@ -91,7 +98,7 @@ inline void get_mode() { // Get mode and store with short press indicator
   if (mode_cnt > 6) {
     mode_cnt = 1;
   }
-  for (oldpos = 10; oldpos < 64; oldpos++) {
+  for (oldpos = 10; oldpos < 63; oldpos++) {
     mode_idx = eeprom_read_byte((const uint8_t *)(uint16_t)oldpos);
     if (mode_idx != 0xff) {
       break;
@@ -99,22 +106,24 @@ inline void get_mode() { // Get mode and store with short press indicator
   }
   eepos = oldpos + 1; // Wear leveling, use next cell
   uint8_t spos = eepos + 1;
-  if (eepos > 63) {
+  uint8_t oldspos = eepos;
+  if (eepos > 62) {
     eepos = 10;
     spos = 11;
-  } else if (eepos == 63) {
-    spos = 10;
+    oldspos = 63;
   }
   if (mode_idx & 0x10) { // Indicates we did a short press last time
     mode_idx &= 0x0f; // Remove short press indicator
     mode_idx++; // Go to the next mode
-    spress_cnt = eeprom_read_byte((const uint8_t *)(uint16_t)eepos);
+    spress_cnt = eeprom_read_byte((const uint8_t *)(uint16_t)oldspos);
     if (spress_cnt != 0xff) {
       spress_cnt++;
     }
   }
   if (spress_cnt >= PROGRAM_SPRESS && spress_cnt < PROGRAM_SPRESS + PROGRAM_MODES) {
     mypwm = 254; // Enter program mode
+  } else if (spress_cnt == BATT_CHECK) {
+    mypwm = 253;
   } else {
     if (mode_idx >= mode_cnt) {
       mode_idx = 0; // Wrap around
@@ -205,6 +214,23 @@ static inline void mode_sos(void) {
   }
 }
 
+static inline void mode_batt(void) {
+  morse_blink(1, PROGRAM_BLINKS, PROGRAM_OUT);
+  delay_5ms(PROGRAM_PAUSE);
+  ADCSRA |= (1 << ADSC); // Start conversion
+  while (ADCSRA & (1 << ADSC)); // Wait for completion
+  if (ADCH > ADC_100) {
+    morse_blink(0, 4, PROGRAM_OUT);
+  } else if (ADCH > ADC_75) {
+    morse_blink(0, 3, PROGRAM_OUT);
+  } else if (ADCH > ADC_50) {
+    morse_blink(0, 2, PROGRAM_OUT);
+  } else if (ADCH > ADC_25) {
+    morse_blink(0, 1, PROGRAM_OUT);
+  }
+  set_output(PROGRAM_OUT, 0);
+}
+
 static inline void mode_program(void) {
   uint8_t i;
   uint8_t j = spress_cnt - PROGRAM_SPRESS;
@@ -226,23 +252,8 @@ static inline void mode_program(void) {
   }
 }
 
-uint8_t low_voltage(uint8_t voltage_val) {
-  static uint8_t lowbatt_cnt = 0;
-  ADCSRA |= (1 << ADSC); // Start conversion
-  while (ADCSRA & (1 << ADSC)); // Wait for completion
-  if (ADCH < voltage_val) { // See if voltage is lower than what we were looking for
-    if (++lowbatt_cnt > 10) { // See if it's been low for a while
-      lowbatt_cnt = 0;
-      return 1;
-    }
-  } else {
-    lowbatt_cnt = 0;
-  }
-  return 0;
-}
-
 ISR(WDT_vect) { // WatchDogTimer interrupt
-  static uint8_t lowbatt_mode = 0;
+  static uint8_t lowbatt_cnt = 0;
   static uint8_t ticks = 0;
   if (ticks < 255) ticks++;
   if (ticks == MODE_TIMEOUT) { // Lock mode
@@ -252,31 +263,20 @@ ISR(WDT_vect) { // WatchDogTimer interrupt
       eeprom_write_byte((uint8_t *)(uint16_t)(eepos), 0);
     }
   }
-  if (mypwm == 255 && ticks == ftimer) { // MODE100 timeout
+  if (mypwm == 255 && ticks == ftimer) { // Full mode timer
     mypwm = MODE_FULL_LOW;
     set_output(mypwm, 1);
   }
   if (BATT_MON && ticks == 255) {
     ticks = 255 - BATT_TIMEOUT; // Battery monitoring interval
-    if (!lowbatt_mode) {
-      if (low_voltage(ADC_LOW)) {
-        lowbatt_mode = 1;
-        if (!smode) {
-          if (mypwm > ADC_LOW_OUT) {
-            mypwm = ADC_LOW_OUT; // Lower output if not in special mode
-          }
-          morse_blink(1, 5, mypwm); // Flash a few times
-          set_output(mypwm, 1);
-        }
-      }
-    } else {
-      if (low_voltage(ADC_CRIT)) {
-        WDT_off(); // Disable WDT so it doesn't wake us up
-        ADCSRA &= ~(1<<7); // ADC off
-        DDRB = (0 << PWM_PIN); // Set PWM pin to input
-        set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
-        sleep_mode();
-      }
+    ADCSRA |= (1 << ADSC); // Start conversion
+    while (ADCSRA & (1 << ADSC)); // Wait for completion
+    if (ADCH < ADC_CRIT && (++lowbatt_cnt > 10)) { // See if voltage is lower than what we were looking for
+      WDT_off(); // Disable WDT so it doesn't wake us up
+      ADCSRA &= ~(1<<7); // ADC off
+      DDRB = (0 << PWM_PIN); // Set PWM pin to input
+      set_sleep_mode(SLEEP_MODE_PWR_DOWN); // Power down as many components as possible
+      sleep_mode();
     }
   }
 }
@@ -286,9 +286,9 @@ int main(void) {
   ACSR |= (1<<7); // AC (Analog Comparator) off
   TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
   set_sleep_mode(SLEEP_MODE_IDLE); // Will allow us to go idle between WDT interrupts
-  set_output(0, 1); // Set phase pwm as default
   ADC_ctrl(); // Battery monitoring
   WDT_on(); // Start watchdogtimer
+  set_output(0, 1); // Set phase pwm as default
   get_mode(); // Get mode identifier and store with short press indicator
   if (mypwm == MODE_PROGRAM) {
     mode_program();
@@ -296,8 +296,9 @@ int main(void) {
     mode_strobe();
   } else if (mypwm == MODE_SOS) {
     mode_sos();
+  } else if (mypwm == MODE_BATT) {
+    mode_batt();
   } else {
-    smode = 0; // Special mode boolean
     set_output(mypwm, 1);
   }
   while(1) {
