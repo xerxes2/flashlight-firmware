@@ -13,16 +13,18 @@ For use in 105d type drivers, no support for stars.
 After that you count all long flashes and switch off when you reach your group.
 
  1. Ramping (default 100)
- 2. 7, 20, 60, 100
- 3. 10, 50, 100
- 4. 10, 50, 100, Strobe
- 5. 100, 50, 10
- 6. 100, 50, 10, Strobe
- 7. 2 with memory
- 8. 3 with memory
- 9. 4 with memory
- 10. 5 with memory
- 11. 6 with memory
+ 2. 10, 50, 100
+ 3. 10, 50, 100, Strobe
+ 4. 7, 20, 60, 100
+ 5. 5, 15, 40, 70, 100
+ 6. 100, 50, 10
+ 7. 100, 50, 10, Strobe
+ 8. 2 with memory
+ 9. 3 with memory
+ 10. 4 with memory
+ 11. 5 with memory
+ 12. 6 with memory
+ 13. 7 with memory
 
 2. Full mode timer (11 short presses)
 

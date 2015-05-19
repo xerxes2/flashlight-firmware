@@ -36,14 +36,15 @@
 
 // Mode groups
 #define GROUP00 {MODE_RAMPING}
-#define GROUP01 {MODE007, MODE020, MODE060, MODE100}
-#define GROUP02 {MODE010, MODE050, MODE100}
-#define GROUP03 {MODE010, MODE050, MODE100, MODE_STROBE}
-#define GROUP04 {MODE100, MODE050, MODE010}
-#define GROUP05 {MODE100, MODE050, MODE010, MODE_STROBE}
+#define GROUP01 {MODE010, MODE050, MODE100}
+#define GROUP02 {MODE010, MODE050, MODE100, MODE_STROBE}
+#define GROUP03 {MODE007, MODE020, MODE060, MODE100}
+#define GROUP04 {MODE005, MODE015, MODE040, MODE070, MODE100}
+#define GROUP05 {MODE100, MODE050, MODE010}
+#define GROUP06 {MODE100, MODE050, MODE010, MODE_STROBE}
 // Mode group settings
-#define GROUP_COUNT 11 // Number of available groups
-#define MODE_MEMORY {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1} // Mode memory for groups, 0 off and 1 on
+//#define GROUP_COUNT 13 // Number of available groups
+//#define MODE_MEMORY {0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1} // Mode memory for groups, 0 off and 1 on
 
 // Strobe settings
 #define STROBE_ON 40  // Strobe on time (ms)
@@ -90,7 +91,7 @@
 //### Globals start ###
 uint8_t eepos; // Mode byte position in eeprom
 uint8_t mode_idx = 0; // Mode position in modes array
-uint8_t mode_memory; // Mode memory
+uint8_t mode_memory = 0; // Mode memory
 uint8_t mypwm = 100; // Mode identifier/output level
 uint8_t spress_cnt = 0; // Short press counter
 uint8_t ftimer; // Full mode timer
@@ -147,22 +148,28 @@ inline void get_mode() { // Get mode and store with short press indicator
       spress_cnt++;
     }
   }
-  const uint8_t memarray[] = MODE_MEMORY;
-  mode_memory = memarray[modesarr];
-  if (modesarr == 2 || modesarr == 7) {
+  //const uint8_t memarray[] = MODE_MEMORY;
+  //mode_memory = memarray[modesarr];
+  if (modesarr > 7) {
+    mode_memory = 1;
+  }
+  if (modesarr == 2 || modesarr == 8) {
       const uint8_t modes[] = GROUP01;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 3 || modesarr == 8) {
+  } else if (modesarr == 3 || modesarr == 9) {
       const uint8_t modes[] = GROUP02;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 4 || modesarr == 9) {
+  } else if (modesarr == 4 || modesarr == 10) {
       const uint8_t modes[] = GROUP03;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 5 || modesarr == 10) {
+  } else if (modesarr == 5 || modesarr == 11) {
       const uint8_t modes[] = GROUP04;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 6 || modesarr == 11) {
+  } else if (modesarr == 6 || modesarr == 12) {
       const uint8_t modes[] = GROUP05;
+      get_mypwm(modes, sizeof(modes));
+  } else if (modesarr == 7 || modesarr == 13) {
+      const uint8_t modes[] = GROUP06;
       get_mypwm(modes, sizeof(modes));
   } else {
       const uint8_t modes[] = GROUP00;
