@@ -243,7 +243,8 @@ static inline void mode_program(void) {
   }
   */
   morse_blink(1, PROGRAM_BLINKS, PROGRAM_OUT);
-  for (i = 1; i <= 255; i++) {
+  for (i = 0; i < 255;) {
+    i++;
     set_output(0, 0);
     delay_5ms(PROGRAM_PAUSE);
     set_output(PROGRAM_OUT, 0);
