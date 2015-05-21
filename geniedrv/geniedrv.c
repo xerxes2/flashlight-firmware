@@ -42,7 +42,7 @@
 #define MODE_TIMEOUT 2 // Number of seconds before mode is saved (1-9)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define PROGRAM_SPRESS 9 // Number of short presses to enter program mode, from 0
-#define PROGRAM_MODES 10 // Number of program modes
+#define PROGRAM_MODES 11 // Number of program modes
 #define PROGRAM_PAUSE 150 // Pause between blinks (5ms)
 #define PROGRAM_OUT 50 // Output level (1-255)
 #define PROGRAM_BLINKS 20 // Number of strobe blinks when entering program mode
@@ -95,27 +95,24 @@ inline void get_mode() { // Get mode and store with short press indicator
   ftimer = eeprom_read_byte((const uint8_t *)(uint16_t)1) - 1; // Number of timer seconds
   strobe_delay = eeprom_read_byte((const uint8_t *)(uint16_t)2); // Strobe delay
   mode_cnt = eeprom_read_byte((const uint8_t *)(uint16_t)3); // Number of modes
-  if (mode_cnt > 6) {
+  if (mode_cnt > 7) {
     mode_cnt = 1;
   }
-  for (oldpos = 10; oldpos < 63; oldpos++) {
+  for (oldpos = 11; oldpos < 63; oldpos++) {
     mode_idx = eeprom_read_byte((const uint8_t *)(uint16_t)oldpos);
     if (mode_idx != 0xff) {
       break;
     }
   }
   eepos = oldpos + 1; // Wear leveling, use next cell
-  uint8_t spos = eepos + 1;
   uint8_t oldspos = eepos;
   if (eepos > 62) {
-    eepos = 10;
-    spos = 11;
-    oldspos = 63;
+    eepos = 11;
   }
   if (mode_idx & 0x10) { // Indicates we did a short press last time
     mode_idx &= 0x0f; // Remove short press indicator
     mode_idx++; // Go to the next mode
-    spress_cnt = eeprom_read_byte((const uint8_t *)(uint16_t)oldspos);
+    spress_cnt = eeprom_read_byte((const uint8_t *)(uint16_t)(oldspos));
     if (spress_cnt != 0xff) {
       spress_cnt++;
     }
@@ -135,7 +132,7 @@ inline void get_mode() { // Get mode and store with short press indicator
   }
   eeprom_write_byte((uint8_t *)(uint16_t)(eepos), (mode_idx | 0x10)); // Store current mode
   eeprom_write_byte((uint8_t *)(uint16_t)(oldpos), 0xff); // Erase old mode
-  eeprom_write_byte((uint8_t *)(uint16_t)(spos), spress_cnt); // Store short press counter
+  eeprom_write_byte((uint8_t *)(uint16_t)(eepos + 1), spress_cnt); // Store short press counter
 }
 
 inline void WDT_on() { // Setup watchdog timer to only interrupt, not reset
@@ -219,29 +216,23 @@ static inline void mode_batt(void) {
   delay_5ms(PROGRAM_PAUSE);
   ADCSRA |= (1 << ADSC); // Start conversion
   while (ADCSRA & (1 << ADSC)); // Wait for completion
+  uint8_t i = 0;
   if (ADCH > ADC_100) {
-    morse_blink(0, 4, PROGRAM_OUT);
+    i = 4;
   } else if (ADCH > ADC_75) {
-    morse_blink(0, 3, PROGRAM_OUT);
+    i = 3;
   } else if (ADCH > ADC_50) {
-    morse_blink(0, 2, PROGRAM_OUT);
+    i = 2;
   } else if (ADCH > ADC_25) {
-    morse_blink(0, 1, PROGRAM_OUT);
+    i = 1;
   }
+  morse_blink(0, i, PROGRAM_OUT);
   set_output(PROGRAM_OUT, 0);
 }
 
 static inline void mode_program(void) {
   uint8_t i;
   uint8_t j = spress_cnt - PROGRAM_SPRESS;
-  /*
-  for (i = 0; i < PROGRAM_BLINKS; i++) {
-    set_output(PROGRAM_OUT, 0);
-    delay_5ms(PROGRAM_DELAY);
-    set_output(0, 0);
-    delay_5ms(PROGRAM_DELAY);
-  }
-  */
   morse_blink(1, PROGRAM_BLINKS, PROGRAM_OUT);
   for (i = 0; i < 255;) {
     i++;

@@ -27,9 +27,9 @@ Tactical strobe should be 10-20 hz which mean 5-10 flashes.
 4. Mode count (13 short presses)
 
  To set number of modes you make 13 short presses and after that you will get a few seconds short flashes.
-All long flashes after that mean one mode each. Max is 6.
+All long flashes after that mean one mode each. Max is 7.
 
-5. Modes (14-19 short presses)
+5. Modes (14-20 short presses)
 
  To set a mode you make 14-19 short presses and after that you will get a few seconds short flashes.
 The first long flash after that means strobe and the second means SOS. All other flashes mean one step
