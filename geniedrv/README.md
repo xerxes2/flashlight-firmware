@@ -10,7 +10,7 @@ For use in 105d type drivers, no support for stars.
 1. Mode memory (10 short presses)
 
  To set memory you make 10 short presses and after that you will get a few seconds short flashes.
-The first long flash after that means memory on. All other flashes mean memory off.
+The first long flash after that means memory off. All other flashes mean memory on.
 
 2. Full mode timer (11 short presses)
 

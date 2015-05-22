@@ -88,10 +88,7 @@ static void delay_5ms(uint8_t n) { // Use own delay function
 inline void get_mode() { // Get mode and store with short press indicator
   uint8_t mode_cnt; // Number of modes
   uint8_t oldpos;
-  mode_memory = eeprom_read_byte((const uint8_t *)(uint16_t)0); // Mode memory
-  if (mode_memory != 1) {
-    mode_memory = 0;
-  }
+  mode_memory = eeprom_read_byte((const uint8_t *)(uint16_t)0) - 1; // Mode memory
   ftimer = eeprom_read_byte((const uint8_t *)(uint16_t)1) - 1; // Number of timer seconds
   strobe_delay = eeprom_read_byte((const uint8_t *)(uint16_t)2); // Strobe delay
   mode_cnt = eeprom_read_byte((const uint8_t *)(uint16_t)3); // Number of modes
