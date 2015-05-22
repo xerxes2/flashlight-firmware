@@ -35,16 +35,13 @@
 #define MODE_STROBE 253 // Just an id dummy number, must not be used for other modes!
 
 // Mode groups
-#define GROUP00 {MODE_RAMPING}
-#define GROUP01 {MODE010, MODE050, MODE100}
-#define GROUP02 {MODE010, MODE050, MODE100, MODE_STROBE}
-#define GROUP03 {MODE007, MODE020, MODE060, MODE100}
-#define GROUP04 {MODE005, MODE015, MODE040, MODE070, MODE100}
-#define GROUP05 {MODE100, MODE050, MODE010}
-#define GROUP06 {MODE100, MODE050, MODE010, MODE_STROBE}
-// Mode group settings
-//#define GROUP_COUNT 13 // Number of available groups
-//#define MODE_MEMORY {0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1} // Mode memory for groups, 0 off and 1 on
+#define GROUP00 {MODE010, MODE050, MODE100}
+#define GROUP01 {MODE010, MODE050, MODE100, MODE_STROBE}
+#define GROUP02 {MODE_RAMPING, MODE010, MODE050, MODE100}
+#define GROUP03 {MODE_RAMPING, MODE007, MODE020, MODE060, MODE100}
+#define GROUP04 {MODE100, MODE050, MODE010}
+#define GROUP05 {MODE100, MODE050, MODE010, MODE_STROBE}
+#define GROUP06 {MODE100}
 
 // Strobe settings
 #define STROBE_ON 40  // Strobe on time (ms)
@@ -61,7 +58,7 @@
 #define MODE_TIMEOUT 2 // Number of seconds before mode is saved (1-9)
 #define FAST_PWM_START 8 // Above what output level should we switch from phase correct to fast-PWM?
 #define PROGRAM_SPRESS 9 // Number of short presses to enter program mode, from 0
-#define PROGRAM_MODES 4 // Number of program modes
+#define PROGRAM_MODES 5 // Number of program modes
 #define PROGRAM_PAUSE 150 // Pause between blinks (5ms)
 #define PROGRAM_OUT MODE020 // Output level (1-255)
 #define PROGRAM_BLINKS 20 // Number of strobe blinks when entering program mode
@@ -91,7 +88,7 @@
 //### Globals start ###
 uint8_t eepos; // Mode byte position in eeprom
 uint8_t mode_idx = 0; // Mode position in modes array
-uint8_t mode_memory = 0; // Mode memory
+uint8_t mode_memory; // Mode memory
 uint8_t mypwm = 100; // Mode identifier/output level
 uint8_t spress_cnt = 0; // Short press counter
 uint8_t ftimer; // Full mode timer
@@ -116,29 +113,27 @@ void get_mypwm(const uint8_t modes[], uint8_t mode_cnt) {
 }
 
 inline void get_mode() { // Get mode and store with short press indicator
-  uint8_t modesarr;
+  uint8_t groupint;
   uint8_t MODE_RAMPING;
   uint8_t oldpos;
-  modesarr = eeprom_read_byte((const uint8_t *)(uint16_t)0); // Number of group array
-  ftimer = eeprom_read_byte((const uint8_t *)(uint16_t)1) - 1; // Number of timer seconds
-  strobe_delay = eeprom_read_byte((const uint8_t *)(uint16_t)2); // Strobe delay
-  MODE_RAMPING = eeprom_read_byte((const uint8_t *)(uint16_t)3); // Ramping output level
+  groupint = eeprom_read_byte((const uint8_t *)(uint16_t)0); // Number of group array
+  mode_memory = eeprom_read_byte((const uint8_t *)(uint16_t)1) - 1; // Mode memory
+  ftimer = eeprom_read_byte((const uint8_t *)(uint16_t)2) - 1; // Number of timer seconds
+  strobe_delay = eeprom_read_byte((const uint8_t *)(uint16_t)3); // Strobe delay
+  MODE_RAMPING = eeprom_read_byte((const uint8_t *)(uint16_t)4); // Ramping output level
   if (MODE_RAMPING > 250) {
     MODE_RAMPING = 255;
   }
-  for (oldpos = 4; oldpos < 63; oldpos++) {
+  for (oldpos = 5; oldpos < 63; oldpos++) {
     mode_idx = eeprom_read_byte((const uint8_t *)(uint16_t)oldpos);
     if (mode_idx != 0xff) {
       break;
     }
   }
   eepos = oldpos + 1; // Wear leveling, use next cell
-  uint8_t spos = eepos + 1;
   uint8_t oldspos = eepos;
   if (eepos > 62) {
-    eepos = 4;
-    spos = 5;
-    oldspos = 63;
+    eepos = 5;
   }
   if (mode_idx & 0x10) { // Indicates we did a short press last time
     mode_idx &= 0x0f; // Remove short press indicator
@@ -150,25 +145,25 @@ inline void get_mode() { // Get mode and store with short press indicator
   }
   //const uint8_t memarray[] = MODE_MEMORY;
   //mode_memory = memarray[modesarr];
-  if (modesarr > 7) {
-    mode_memory = 1;
-  }
-  if (modesarr == 2 || modesarr == 8) {
+  //if (modesarr > 7) {
+  //  mode_memory = 1;
+  //}
+  if (groupint == 2) {
       const uint8_t modes[] = GROUP01;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 3 || modesarr == 9) {
+  } else if (groupint == 3) {
       const uint8_t modes[] = GROUP02;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 4 || modesarr == 10) {
+  } else if (groupint == 4) {
       const uint8_t modes[] = GROUP03;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 5 || modesarr == 11) {
+  } else if (groupint == 5) {
       const uint8_t modes[] = GROUP04;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 6 || modesarr == 12) {
+  } else if (groupint == 6) {
       const uint8_t modes[] = GROUP05;
       get_mypwm(modes, sizeof(modes));
-  } else if (modesarr == 7 || modesarr == 13) {
+  } else if (groupint == 7) {
       const uint8_t modes[] = GROUP06;
       get_mypwm(modes, sizeof(modes));
   } else {
@@ -177,7 +172,7 @@ inline void get_mode() { // Get mode and store with short press indicator
   }
   eeprom_write_byte((uint8_t *)(uint16_t)(eepos), (mode_idx | 0x10)); // Store current mode
   eeprom_write_byte((uint8_t *)(uint16_t)(oldpos), 0xff); // Erase old mode
-  eeprom_write_byte((uint8_t *)(uint16_t)(spos), spress_cnt); // Store short press counter
+  eeprom_write_byte((uint8_t *)(uint16_t)(eepos + 1), spress_cnt); // Store short press counter
 }
 
 inline void WDT_on() { // Setup watchdog timer to only interrupt, not reset
