@@ -21,6 +21,7 @@ After that you count all long flashes and switch off when you reach your group.
  7. 100
 
 2. Mode memory (11 short presses)
+
  To set memory you make 11 short presses and after that you will get a few seconds short flashes.
 The first long flash after that means memory off. All other flashes mean memory on.
 
