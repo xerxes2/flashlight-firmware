@@ -31,9 +31,13 @@ All long flashes after that mean one mode each. Max is 7.
 
 5. Modes (14-20 short presses)
 
- To set a mode you make 14-19 short presses and after that you will get a few seconds short flashes.
+ To set a mode you make 14-20 short presses and after that you will get a few seconds short flashes.
 The first long flash after that means strobe and the second means SOS. All other flashes mean one step
 normal light output (3-255).
+
+ 1. Strobe
+ 2. SOS
+ 3. Normal light output (3-255)
 
 ##### Battery check (30 short presses)
 
